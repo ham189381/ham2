@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>DriveSearch | Select district → choose town → find drivers</title>
+    <!-- Font Awesome 6 (free icons) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #eef2f9 0%, #e0e8f2 100%);
+            min-height: 100vh;
+            padding: 2rem 1.5rem;
+        }
+
+        .container {
+            max-width: 1300px;
+            margin: 0 auto;
+        }
+
+        /* header */
+        .hero {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .hero h1 {
+            font-size: 2rem;
+            font-weight: 800;
+            background: linear-gradient(145deg, #1A3A4F, #2C5A74);
+            background-clip: text;
+            -webkit-background-clip: text;
+            color: transparent;
+            letter-spacing: -0.3px;
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .hero h1 i {
+            background: none;
+            color: #2c6e9e;
+        }
+
+        .hero p {
+            color: #2c4f6e;
+            margin-top: 8px;
+            font-weight: 500;
+        }
+
+        /* main card */
+        .form-card {
+            background: white;
+            border-radius: 2rem;
+            box-shadow: 0 20px 35px -12px rgba(0, 0, 0, 0.15);
+            padding: 1.8rem 2rem;
+            margin-bottom: 2rem;
+            transition: all 0.2s;
+            border: 1px solid rgba(255,255,255,0.5);
+        }
+
+        .section-title {
+            font-size: 1rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #2c5a74;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .district-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .district-btn {
+            background: #f1f5f9;
+            border: 1.5px solid #cbdde9;
+            padding: 0.8rem 1.8rem;
+            border-radius: 3rem;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            color: #1f4662;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .district-btn i {
+            font-size: 1.1rem;
+        }
+
+        .district-btn.active {
+            background: #1e4a6e;
+            border-color: #1e4a6e;
+            color: white;
+            box-shadow: 0 8px 14px -8px rgba(0, 0, 0, 0.2);
+        }
+
+        .district-btn:hover:not(.active) {
+            background: #e6edf6;
+            transform: translateY(-2px);
+            border-color: #b9cfdf;
+        }
+
+        /* towns panel */
+        .towns-panel {
+            background: #fafcff;
+            border-radius: 1.5rem;
+            padding: 1.2rem 1.5rem;
+            margin-bottom: 1.8rem;
+            border: 1px solid #e2edf5;
+            transition: all 0.2s;
+        }
+
+        .towns-label {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #2b5e7e;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .towns-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.8rem;
+        }
+
+        .town-chip {
+            background: white;
+            border: 1.5px solid #cfe0ec;
+            padding: 0.6rem 1.4rem;
+            border-radius: 2.5rem;
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: #1f4e6e;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .town-chip i {
+            font-size: 0.8rem;
+            color: #5f8dae;
+        }
+
+        .town-chip.selected-town {
+            background: #1e4a6e;
+            border-color: #1e4a6e;
+            color: white;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .town-chip.selected-town i {
+            color: white;
+        }
+
+        .town-chip:hover:not(.selected-town) {
+            background: #eef3fc;
+            border-color: #aec9df;
+            transform: translateY(-1px);
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            background: #f0f6fd;
+            border-radius: 1.5rem;
+            padding: 0.8rem 1.2rem;
+            margin: 1rem 0 1.5rem 0;
+        }
+
+        .selected-badge {
+            background: white;
+            border-radius: 2rem;
+            padding: 0.4rem 1rem;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #1f5a7a;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-submit {
+            background: #1f5e7e;
+            border: none;
+            padding: 1rem 2rem;
+            border-radius: 3rem;
+            font-weight: 700;
+            font-size: 1rem;
+            color: white;
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 5px 12px rgba(0,0,0,0.1);
+            width: 100%;
+            justify-content: center;
+        }
+
+        .btn-submit:hover {
+            background: #0e435e;
+            transform: translateY(-2px);
+            box-shadow: 0 12px 20px -10px rgba(0,0,0,0.2);
+        }
+
+        .btn-reset {
+            background: transparent;
+            border: 1.5px solid #bdd4e4;
+            padding: 0.7rem 1.5rem;
+            border-radius: 2.5rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: 0.2s;
+            color: #2c6280;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-reset:hover {
+            background: #eaf1f9;
+            border-color: #8fb4cc;
+        }
+
+        /* driver results section (kept for demo feedback) */
+        .results-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            flex-wrap: wrap;
+            margin: 1rem 0 1.2rem 0;
+        }
+        .results-header h2 {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: #1a3f55;
+        }
+        .driver-count {
+            background: #e5f0f7;
+            padding: 0.3rem 1.2rem;
+            border-radius: 40px;
+            font-weight: 600;
+            color: #1f668b;
+        }
+        .drivers-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(310px, 1fr));
+            gap: 1.5rem;
+        }
+        .driver-card {
+            background: white;
+            border-radius: 1.5rem;
+            overflow: hidden;
+            transition: 0.2s;
+            box-shadow: 0 6px 14px rgba(0, 0, 0, 0.05);
+            border: 1px solid #eef2f8;
+        }
+        .driver-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 20px 25px -12px rgba(0, 0, 0, 0.1);
+        }
+        .card-header {
+            background: #f9fdfe;
+            padding: 1rem 1.2rem;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            border-bottom: 1px solid #e9f0f5;
+        }
+        .avatar {
+            width: 48px;
+            height: 48px;
+            background: linear-gradient(135deg, #2c7da0, #1f6182);
+            border-radius: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.3rem;
+        }
+        .driver-info h3 {
+            font-size: 1rem;
+            font-weight: 800;
+        }
+        .badge {
+            font-size: 0.7rem;
+            background: #eef2fa;
+            padding: 0.2rem 0.6rem;
+            border-radius: 20px;
+        }
+        .card-body {
+            padding: 0.8rem 1.2rem 1rem;
+        }
+        .detail-row {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 8px;
+            font-size: 0.85rem;
+        }
+        .empty-state {
+            grid-column: 1 / -1;
+            text-align: center;
+            padding: 2rem;
+            background: #f6fafd;
+            border-radius: 2rem;
+            color: #5d7e9a;
+        }
+        footer {
+            margin-top: 2.5rem;
+            text-align: center;
+            font-size: 0.75rem;
+            color: #5882a3;
+            border-top: 1px solid #cde0ec;
+            padding-top: 1.5rem;
+        }
+
+        @media (max-width: 640px) {
+            body { padding: 1rem; }
+            .form-card { padding: 1.2rem; }
+            .district-btn { padding: 0.5rem 1.2rem; font-size: 0.9rem; }
+            .town-chip { padding: 0.4rem 1rem; }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="hero">
+        <h1><i class="fas fa-map-marked-alt"></i> Driver Finder</h1>
+        <p>Click a district → pick a town → search verified drivers</p>
+    </div>
+
+    <!-- Interactive form: no traditional dropdowns, only district buttons + town chips -->
+    <div class="form-card">
+        <form id="searchForm" method="POST" action="/search_driversby">
+            <!-- hidden inputs to send district & town -->
+            <input type="hidden" name="district" id="hiddenDistrict" value="">
+            <input type="hidden" name="town" id="hiddenTown" value="">
+
+            <!-- District section (buttons) -->
+            <div class="section-title">
+                <i class="fas fa-building"></i> 1. Select district
+            </div>
+            <div class="district-buttons" id="districtButtonsContainer">
+                <!-- dynamic district buttons will be injected via JS but also static for clarity -->
+            </div>
+
+            <!-- Town section (dynamic list) -->
+            <div class="towns-panel" id="townsPanel">
+                <div class="towns-label">
+                    <i class="fas fa-city"></i> 2. Towns in selected district
+                </div>
+                <div id="townsListContainer" class="towns-grid">
+                    <span style="color:#799eb6; font-style:italic;">👆 Click a district button above to see towns</span>
+                </div>
+            </div>
+
+            <!-- Selection summary & actions -->
+            <div class="info-row">
+                <div class="selected-badge" id="selectedSummary">
+                    <i class="fas fa-location-dot"></i> No district selected
+                </div>
+                <button type="button" id="resetSelectionBtn" class="btn-reset">
+                    <i class="fas fa-undo-alt"></i> Reset all
+                </button>
+            </div>
+
+            <button type="submit" class="btn-submit" id="submitSearchBtn">
+                <i class="fas fa-search"></i> Search Drivers
+            </button>
+        </form>
+    </div>
+
+    <!-- results preview (show matching drivers from mock data to demonstrate functionality) -->
+    <div class="results-header">
+        <h2><i class="fas fa-users"></i> Driver results</h2>
+        <div class="driver-count" id="driverCountDisplay">0 drivers</div>
+    </div>
+    <div id="driversGrid" class="drivers-grid">
+        <div class="empty-state">
+            <i class="fas fa-car-side"></i>
+            <p>Select district & town and press "Search Drivers"</p>
+        </div>
+    </div>
+    <footer>
+        <i class="fas fa-check-circle"></i> Reliable drivers • district & town based search • POST to /search_driversby
+    </footer>
+</div>
+
+<script>
+    // ------------------------------
+    // MOCK DATA: districts & towns mapping (exactly as needed for the search)
+    // Each district has its unique set of towns
+    // ------------------------------
+    const districtsTownsMap = {
+        "Wakiso": ["Kira", "Nansana", "Kasangati", "Akright City","Abayita Ababiri","Banda","Banga","Buddo", "Bweyogerere"],
+        "Kampala": ["Kampala Central", "Ntinda", "Nakasero", "Kamwookya", "Bugolobi"],
+        "Mukono": ["Mukono", "Bweyogerere", "Seeta", "Namilyango", "Kyetume"]
+    };
+    
+    // Mock drivers database (for demo purposes to reflect realistic search results)
+    const driversData = [
+        { id: 1, name: "John Mukasa", district: "Wakiso", town: "Kira", phone: "+256 701 234 567", vehicle: "Toyota Premio", rating: 4.8 },
+        { id: 2, name: "Sarah Nabatanzi", district: "Wakiso", town: "Nansana", phone: "+256 782 345 678", vehicle: "Honda Fit", rating: 4.9 },
+        { id: 3, name: "Robert Ssenyonga", district: "Wakiso", town: "Kasangati", phone: "+256 703 456 789", vehicle: "Subaru Forester", rating: 4.7 },
+        { id: 4, name: "Grace Achieng", district: "Kampala", town: "Kampala Central", phone: "+256 712 987 654", vehicle: "Nissan Note", rating: 4.9 },
+        { id: 5, name: "Michael Odongo", district: "Kampala", town: "Ntinda", phone: "+256 775 432 109", vehicle: "Toyota Harrier", rating: 4.8 },
+        { id: 6, name: "Patricia Nalwoga", district: "Kampala", town: "Nakasero", phone: "+256 702 345 890", vehicle: "Mazda Demio", rating: 5.0 },
+        { id: 7, name: "David Wasswa", district: "Mukono", town: "Mukono", phone: "+256 789 123 456", vehicle: "Toyota Sienta", rating: 4.6 },
+        { id: 8, name: "Rebecca Nambi", district: "Mukono", town: "Bweyogerere", phone: "+256 701 998 877", vehicle: "Subaru Impreza", rating: 4.7 },
+        { id: 9, name: "Ivan Ssempijja", district: "Mukono", town: "Seeta", phone: "+256 704 567 123", vehicle: "Honda CRV", rating: 4.8 },
+        { id: 10, name: "Lilian Nantume", district: "Wakiso", town: "Kira", phone: "+256 776 554 332", vehicle: "Toyota Vitz", rating: 4.5 },
+        { id: 11, name: "Henry Kizito", district: "Kampala", town: "Ntinda", phone: "+256 702 882 211", vehicle: "Mitsubishi Lancer", rating: 4.4 },
+        { id: 12, name: "Martha Auma", district: "Wakiso", town: "Kasangati", phone: "+256 705 119 223", vehicle: "Toyota Passo", rating: 4.7 },
+        { id: 13, name: "Emmanuel Ssekandi", district: "Mukono", town: "Namilyango", phone: "+256 700 998 776", vehicle: "Toyota Wish", rating: 4.6 },
+        { id: 14, name: "Claire Nabbanja", district: "Wakiso", town: "Ntinda", phone: "+256 782 445 667", vehicle: "Honda HRV", rating: 4.9 },
+        { id: 15, name: "Brian Wassajja", district: "Kampala", town: "Kamwookya", phone: "+256 709 882 341", vehicle: "Nissan X-Trail", rating: 4.5 }
+    ];
+
+    // DOM elements
+    const districtContainer = document.getElementById('districtButtonsContainer');
+    const townsContainer = document.getElementById('townsListContainer');
+    const hiddenDistrict = document.getElementById('hiddenDistrict');
+    const hiddenTown = document.getElementById('hiddenTown');
+    const selectedSummarySpan = document.getElementById('selectedSummary');
+    const resetBtn = document.getElementById('resetSelectionBtn');
+    const searchForm = document.getElementById('searchForm');
+    const driversGrid = document.getElementById('driversGrid');
+    const driverCountDisplay = document.getElementById('driverCountDisplay');
+
+    // State variables
+    let currentDistrict = null;      // selected district (string or null)
+    let currentTown = null;          // selected town (string or null)
+
+    // Helper: render district buttons
+    function renderDistrictButtons() {
+        const districts = Object.keys(districtsTownsMap);
+        districtContainer.innerHTML = '';
+        districts.forEach(district => {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = `district-btn ${currentDistrict === district ? 'active' : ''}`;
+            btn.innerHTML = `<i class="fas fa-map-pin"></i> ${district}`;
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                // set current district
+                currentDistrict = district;
+                // reset town selection because district changed
+                currentTown = null;
+                updateHiddenFields();
+                updateSelectionSummary();
+                // render town list for this district
+                renderTownsForDistrict(district);
+                // update active state on district buttons
+                document.querySelectorAll('.district-btn').forEach(btn => btn.classList.remove('active'));
+                btn.classList.add('active');
+                // also clear any previous town highlight
+                highlightSelectedTown();
+                // Optionally clear driver results when district changes (user will click search anyway)
+                // but we don't auto-search.
+            });
+            districtContainer.appendChild(btn);
+        });
+    }
+
+    // Render towns for given district
+    function renderTownsForDistrict(district) {
+        if (!district || !districtsTownsMap[district]) {
+            townsContainer.innerHTML = `<span style="color:#799eb6;">⚠️ Select a district to see towns</span>`;
+            return;
+        }
+        const towns = districtsTownsMap[district];
+        townsContainer.innerHTML = '';
+        towns.forEach(town => {
+            const townChip = document.createElement('div');
+            townChip.className = `town-chip ${currentTown === town ? 'selected-town' : ''}`;
+            townChip.innerHTML = `<i class="fas fa-location-dot"></i> ${town}`;
+            townChip.addEventListener('click', (e) => {
+                e.preventDefault();
+                // select this town
+                currentTown = town;
+                updateHiddenFields();
+                updateSelectionSummary();
+                // update highlight on towns
+                document.querySelectorAll('.town-chip').forEach(chip => chip.classList.remove('selected-town'));
+                townChip.classList.add('selected-town');
+            });
+            townsContainer.appendChild(townChip);
+        });
+    }
+
+    // highlight currently selected town if any (after render update)
+    function highlightSelectedTown() {
+        if (!currentTown) return;
+        const allTownChips = document.querySelectorAll('.town-chip');
+        allTownChips.forEach(chip => {
+            const townName = chip.innerText.trim().replace(/[📍]/g, '').trim(); // simple cleanup
+            if (townName === currentTown) {
+                chip.classList.add('selected-town');
+            } else {
+                chip.classList.remove('selected-town');
+            }
+        });
+    }
+
+    // update hidden form fields (district + town)
+    function updateHiddenFields() {
+        if (currentDistrict) {
+            hiddenDistrict.value = currentDistrict;
+        } else {
+            hiddenDistrict.value = '';
+        }
+        if (currentTown) {
+            hiddenTown.value = currentTown;
+        } else {
+            hiddenTown.value = '';
+        }
+    }
+
+    // update summary text
+    function updateSelectionSummary() {
+        if (!currentDistrict) {
+            selectedSummarySpan.innerHTML = '<i class="fas fa-location-dot"></i> No district selected';
+            return;
+        }
+        if (currentDistrict && !currentTown) {
+            selectedSummarySpan.innerHTML = `<i class="fas fa-building"></i> ${currentDistrict} · <span style="opacity:0.8;">(town not selected)</span>`;
+        } else if (currentDistrict && currentTown) {
+            selectedSummarySpan.innerHTML = `<i class="fas fa-check-circle"></i> ${currentDistrict} › ${currentTown}`;
+        }
+    }
+
+    // reset all selections (district, town, form fields)
+    function resetSelections() {
+        currentDistrict = null;
+        currentTown = null;
+        hiddenDistrict.value = '';
+        hiddenTown.value = '';
+        updateSelectionSummary();
+        // reset district buttons active state
+        document.querySelectorAll('.district-btn').forEach(btn => btn.classList.remove('active'));
+        // reset towns panel to placeholder
+        townsContainer.innerHTML = `<span style="color:#799eb6;">👆 Click a district button above to see towns</span>`;
+        // clear driver results display
+        renderDrivers([]);
+        driverCountDisplay.innerText = `0 drivers`;
+        // Optionally also display empty state message
+        driversGrid.innerHTML = `<div class="empty-state"><i class="fas fa-search-location"></i><p>No search yet. Select district & town, then click Search.</p></div>`;
+    }
+
+    // ---------- Driver search simulation based on selected district & town ----------
+    // This function filters mock drivers by district and town (exact match)
+    function filterDriversByDistrictAndTown(district, town) {
+        if (!district) return [];
+        let filtered = driversData.filter(d => d.district === district);
+        if (town) {
+            filtered = filtered.filter(d => d.town === town);
+        }
+        return filtered;
+    }
+
+    // render driver cards
+    function renderDrivers(driversArray) {
+        if (!driversArray.length) {
+            driversGrid.innerHTML = `
+                <div class="empty-state">
+                    <i class="fas fa-car"></i>
+                    <h3 style="margin-top: 10px;">No drivers found</h3>
+                    <p>Try another district/town combination</p>
+                </div>
+            `;
+            driverCountDisplay.innerText = `0 drivers`;
+            return;
+        }
+        const cardsHtml = driversArray.map(driver => {
+            const fullStars = Math.floor(driver.rating);
+            let starsHtml = '';
+            for (let i=0; i<fullStars; i++) starsHtml += '<i class="fas fa-star" style="color:#f5b042; font-size:0.7rem;"></i>';
+            const remainder = driver.rating - fullStars;
+            if (remainder >= 0.5) starsHtml += '<i class="fas fa-star-half-alt" style="color:#f5b042; font-size:0.7rem;"></i>';
+            while (starsHtml.split('fa-star').length -1 + (remainder>=0.5?1:0) < 5) {
+                starsHtml += '<i class="far fa-star" style="color:#cbd5e0; font-size:0.7rem;"></i>';
+            }
+            return `
+                <div class="driver-card">
+                    <div class="card-header">
+                        <div class="avatar"><i class="fas fa-user-tie"></i></div>
+                        <div class="driver-info">
+                            <h3>${escapeHtml(driver.name)}</h3>
+                            <div class="badge">⭐ ${driver.rating}</div>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="detail-row"><i class="fas fa-phone-alt"></i> ${escapeHtml(driver.phone)}</div>
+                        <div class="detail-row"><i class="fas fa-car"></i> ${escapeHtml(driver.vehicle)}</div>
+                        <div class="detail-row"><i class="fas fa-map-marker-alt"></i> ${escapeHtml(driver.district)} • ${escapeHtml(driver.town)}</div>
+                        <div style="margin-top: 6px;">${starsHtml}</div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+        driversGrid.innerHTML = cardsHtml;
+        driverCountDisplay.innerText = `${driversArray.length} ${driversArray.length === 1 ? 'driver' : 'drivers'}`;
+    }
+
+    function escapeHtml(str) {
+        if (!str) return '';
+        return str.replace(/[&<>]/g, function(m) {
+            if (m === '&') return '&amp;';
+            if (m === '<') return '&lt;';
+            if (m === '>') return '&gt;';
+            return m;
+        });
+    }
+
+    // Handle form submission (POST with selected district & town)
+    function handleSearchSubmit(e) {
+        e.preventDefault();  // we'll manage display but also ensure actual POST if needed? 
+        // However spec: form should POST to /search_driversby with district and town.
+        // But to also show demo results, we will simulate driver filtering but also keep the real form submission.
+        // Since this is a frontend demo, we will perform both: update driver results and also submit the form
+        // to the backend as per original requirement.
+        if (!currentDistrict) {
+            alert("⚠️ Please select a district first.");
+            return;
+        }
+        if (!currentTown) {
+            alert("⚠️ Please select a town from the list (after choosing district).");
+            return;
+        }
+        // update hidden fields again just to be safe
+        updateHiddenFields();
+        
+        // 1) For demo: show matching drivers in the UI using our mock dataset
+        const matchedDrivers = filterDriversByDistrictAndTown(currentDistrict, currentTown);
+        renderDrivers(matchedDrivers);
+        
+        // 2) Actually submit the form to the Flask backend (as originally required)
+        // We will submit the form programmatically after a short delay? 
+        // But to avoid double navigation & preserve UX, we directly submit the form.
+        // Since the form action is "/search_driversby" and method POST, we just call .submit()
+        // but the user can also see results before redirect? However typical behavior: form submit will redirect.
+        // For better UX: we could use fetch API? But the requirement says "form with POST action".
+        // I'll keep both: after showing filtered results, I submit the form to the backend.
+        // However to avoid confusion, we use the native form submit.
+        // The backend will receive district and town via POST.
+        // If you want to see the driver preview without leaving the page, uncomment the next line?
+        // But we must respect original spec: submits to flask. So final step: form submit.
+        // We'll allow the form to submit normally after showing local results but to not block, we do:
+        // Use a small delay so user sees updated results then redirect? Not needed, but we submit instantly.
+        // Actually spec requires POST to flask. So we let the form submit.
+        // But we have already prevented default, so we need to manually submit the form.
+        // Because the form contains hidden fields, it will send correct data.
+        // Submit the form to backend (original endpoint)
+        e.target.submit();   // send POST request to /search_driversby with district & town
+    }
+
+    // Reset logic
+    function resetAll() {
+        resetSelections();
+        currentDistrict = null;
+        currentTown = null;
+        hiddenDistrict.value = '';
+        hiddenTown.value = '';
+        updateSelectionSummary();
+        // remove active class from district buttons
+        document.querySelectorAll('.district-btn').forEach(btn => btn.classList.remove('active'));
+        townsContainer.innerHTML = `<span style="color:#799eb6;">👆 Click a district button above to see towns</span>`;
+        renderDrivers([]);
+        driverCountDisplay.innerText = `0 drivers`;
+    }
+
+    // initialization
+    function init() {
+        renderDistrictButtons();
+        // No district selected at start
+        currentDistrict = null;
+        currentTown = null;
+        updateHiddenFields();
+        updateSelectionSummary();
+        townsContainer.innerHTML = `<span style="color:#799eb6;">👆 Click a district button to see towns</span>`;
+        // attach form submit
+        searchForm.addEventListener('submit', handleSearchSubmit);
+        resetBtn.addEventListener('click', resetAll);
+        // initial driver grid placeholder
+        driversGrid.innerHTML = `<div class="empty-state"><i class="fas fa-info-circle"></i><p>Select district & town then click "Search Drivers"</p></div>`;
+    }
+
+    init();
+</script>
+</body>
+</html>

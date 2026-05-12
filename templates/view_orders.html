@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>All Customer Orders</title>
+    <style>
+        body { font-family: Arial; background: #dddada; }
+        .order-card { background: white; margin: 20px; padding: 15px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); position: relative; }
+        .order-card img { max-width: 200px; margin: 10px; border-radius: 5px; }
+        hr { margin: 15px 0; }
+        .order-info { margin: 10px 0; }
+        .order-info strong { display: inline-block; width: 150px; }
+        .actions { margin-top: 15px; }
+        .actions a { display: inline-block; margin-right: 10px; padding: 5px 10px; text-decoration: none; border-radius: 4px; }
+        .edit-btn { background: #2196F3; color: white; }
+        .delete-btn { background: #f44336; color: white; }
+        /* New style for the map link */
+        .map-link { 
+            display: inline-block; 
+            margin-left: 15px; 
+            padding: 4px 10px; 
+            background: #4CAF50; 
+            color: white; 
+            text-decoration: none; 
+            border-radius: 4px; 
+            font-size: 0.9em;
+        }
+        .map-link:hover { background: #45a049; }
+    </style>
+</head>
+<body>
+<h2 style="text-align:center;">📦 Customer Orders</h2>
+{% for order in orders %}
+<div class="order-card">
+    <div class="order-info"><strong>Name:</strong> {{ order.name }}</div>
+    <div class="order-info"><strong>District:</strong> {{ order.district }}</div>
+    <div class="order-info"><strong>Town:</strong> {{ order.town }}</div>
+    <div class="order-info"><strong>Truck:</strong> {{ order.truck_name }}</div>
+    <div class="order-info"><strong>Material/Service:</strong> {{ order.material_service }}</div>
+    <div class="order-info">
+        <strong>Location:</strong> {{ order.location }}
+        {% if order.location %}
+            <a href="https://www.google.com/maps/search/?api=1&query={{ order.location | urlencode }}" target="_blank" class="map-link">
+                📍 View on Map
+            </a>
+        {% endif %}
+    </div>
+    <div class="order-info"><strong>Phone:</strong> <a href="tel:{{ order.phone }}">{{ order.phone }}</a></div>
+    <div class="order-info"><strong>Ordered on:</strong> {{ order.created_at }}</div>
+    <div>
+        {% if order.image1 %}
+            <img src="{{ order.image1 }}" alt="Order image 1">
+        {% endif %}
+        {% if order.image2 %}
+            <img src="{{ order.image2 }}" alt="Order image 2">
+        {% endif %}
+    </div>
+    <div class="actions">
+        <a href="/edit_order/{{ order.id }}" class="edit-btn">✏️ Edit</a>
+        <a href="/delete_order/{{ order.id }}" class="delete-btn" onclick="return confirm('Are you sure you want to delete this order?')">🗑️ Delete</a>
+    </div>
+</div>
+{% endfor %}
+</body>
+</html>

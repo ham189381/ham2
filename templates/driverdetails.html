@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>SOFERY - Driver Registration with Location</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='driverdetailsstyles.css') }}">
+    <style>
+        .geo-btn {
+            background-color: #2c7da0;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 30px;
+            cursor: pointer;
+            font-weight: bold;
+            margin-top: 5px;
+            margin-bottom: 12px;
+        }
+        .geo-btn:hover {
+            background-color: #1f5068;
+        }
+        .location-hint {
+            font-size: 0.85rem;
+            color: #2c5530;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+
+<form action="/driver" method="POST" enctype="multipart/form-data">
+    <h1>SOFERY - ENTER YOUR DETAILS</h1>
+
+    <label for="name">Full name</label><br>
+    <input type="text" id="name" name="name" placeholder="e.g., John Kamau" required><br><br>
+
+    <label for="district">District</label><br>
+    <input type="text" id="district" name="district" placeholder="e.g., Kisumu" required><br><br>
+
+    
+    <label for="town">Town</label><br>
+    <input type="text" id="town" name="town" placeholder="e.g., Kisumu CBD" required><br><br>
+
+    <label for="phone">Phone number</label><br>
+    <input type="tel" id="phone" name="phone" placeholder="0712345678" required><br><br>
+
+    <label for="truck_name">Truck name / model</label><br>
+    <input type="text" id="truck_name" name="truck_name" placeholder="e.g., FUSO Fighter" required><br><br>
+
+    <label>📍 Your Location (coordinates)</label>
+        <textarea name="location" id="location" rows="2" placeholder="Click the 'Get My Current Location' button (required)" required style="background-color: #f0f0f0;"></textarea>
+        <div class="coord-hint">Coordinates will be stored as latitude,longitude</div>
+        <button type="button" class="loc-btn" onclick="getLocation()" required>📍 Get My Current Location</button>
+        <button type="button" class="map-link" onclick="viewOnMap()" style="background:#FF9800;">🗺️ Preview on Google Maps</button>
+
+<br/><br/>
+    <!-- Image uploads -->
+    <label>Truck / Driver images:</label><br>
+    image 1: <input type="file" name="image1" required><br>
+    image 2: <input type="file" name="image2" required><br>
+    image 3: <input type="file" name="image3" required><br><br>
+
+    <button type="submit">Save Driver</button>
+</form>
+
+<script>
+    let currentCoords = "";
+
+    function getLocation() {
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(showPosition, showError);
+        } else {
+            alert("Geolocation is not supported by this browser.");
+        }
+    }
+
+    function showPosition(position) {
+        const lat = position.coords.latitude;
+        const lon = position.coords.longitude;
+        currentCoords = `${lat},${lon}`;
+        const locationField = document.getElementById("location");
+        locationField.value = currentCoords;
+        locationField.style.background = "#e8f5e9";
+    }
+
+    function viewOnMap() {
+        if (currentCoords) {
+            window.open(`https://www.google.com/maps?q=${currentCoords}`, '_blank');
+        } else {
+            alert("First click 'Get My Current Location' to obtain coordinates.");
+        }
+    }
+
+    function showError(error) {
+        switch(error.code) {
+            case error.PERMISSION_DENIED:
+                alert("You denied the request for geolocation.");
+                break;
+            case error.POSITION_UNAVAILABLE:
+                alert("Location information is unavailable.");
+                break;
+            case error.TIMEOUT:
+                alert("The request to get user location timed out.");
+                break;
+            default:
+                alert("An unknown error occurred.");
+        }
+    }
+</script>
+</body>
+</html>
