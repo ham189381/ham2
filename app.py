@@ -15,9 +15,9 @@ app = Flask(__name__)
 # -------------------------
 # You need to set these environment variables or replace with your actual credentials
 cloudinary.config(
-    cloud_name=os.environ.get("CLOUDINARY_CLOUD_NAME", "your_cloud_name"),
-    api_key=os.environ.get("CLOUDINARY_API_KEY", "your_api_key"),
-    api_secret=os.environ.get("CLOUDINARY_API_SECRET", "your_api_secret"),
+    cloud_name=os.environ.get("CLOUDINARY_CLOUD_NAME", "df8mj7a7d"),
+    api_key=os.environ.get("CLOUDINARY_API_KEY", "472983627877217"),
+    api_secret=os.environ.get("CLOUDINARY_API_SECRET", "qU0fIsZHNVxO36UCTvaGSKXVjno"),
     secure=True
 )
 
