@@ -7,17 +7,18 @@ import cloudinary
 import cloudinary.uploader
 import cloudinary.api
 from io import BytesIO
+import traceback  # ADDED: for better error logging
 
 app = Flask(__name__)
 
 # -------------------------
 # Cloudinary Configuration
 # -------------------------
-# You need to set these environment variables or replace with your actual credentials
+# CHANGED: Removed hardcoded defaults, now only uses environment variables
 cloudinary.config(
-    cloud_name=os.environ.get("CLOUDINARY_CLOUD_NAME", "df8mj7a7d"),
-    api_key=os.environ.get("CLOUDINARY_API_KEY", "472983627877217"),
-    api_secret=os.environ.get("CLOUDINARY_API_SECRET", "qU0fIsZHNVxO36UCTvaGSKXVjno"),
+    cloud_name=os.environ.get("CLOUDINARY_CLOUD_NAME"),
+    api_key=os.environ.get("CLOUDINARY_API_KEY"),
+    api_secret=os.environ.get("CLOUDINARY_API_SECRET"),
     secure=True
 )
 
@@ -98,10 +99,15 @@ def save_image(file, prefix=""):
 # -------------------------
 # Database connection (local)
 # -------------------------
+# CHANGED: Fixed database connection for Render compatibility
 def get_db_connection():
-    """Return a PostgreSQL connection for local development."""
+    """Return a PostgreSQL connection for local development or production."""
     database_url = os.environ.get("DATABASE_URL")
     if database_url:
+        # Render provides DATABASE_URL, but it might start with postgres://
+        # Psycopg2 requires postgresql://
+        if database_url.startswith("postgres://"):
+            database_url = database_url.replace("postgres://", "postgresql://", 1)
         return psycopg2.connect(database_url)
     else:
         return psycopg2.connect(
@@ -314,38 +320,44 @@ def kampala_ntinda():
 def driverdetails():
     return render_template("driverdetails.html")
 
+# CHANGED: Added try-except block for better error handling
 @app.route("/driver", methods=["GET", "POST"])
 def driver():
     if request.method == "POST":
-        name = request.form["name"]
-        district = request.form["district"]
-        town = request.form["town"]
-        phone = request.form["phone"]
-        truck_name = request.form["truck_name"]
-        location = request.form["location"]
+        try:
+            name = request.form["name"]
+            district = request.form["district"]
+            town = request.form["town"]
+            phone = request.form["phone"]
+            truck_name = request.form["truck_name"]
+            location = request.form["location"]
 
-        image1 = request.files.get("image1")
-        image2 = request.files.get("image2")
-        image3 = request.files.get("image3")
+            image1 = request.files.get("image1")
+            image2 = request.files.get("image2")
+            image3 = request.files.get("image3")
 
-        # These will now upload to Cloudinary automatically
-        url1 = save_image(image1, f"driver_{name}_1")
-        url2 = save_image(image2, f"driver_{name}_2")
-        url3 = save_image(image3, f"driver_{name}_3")
+            # These will now upload to Cloudinary automatically
+            url1 = save_image(image1, f"driver_{name}_1")
+            url2 = save_image(image2, f"driver_{name}_2")
+            url3 = save_image(image3, f"driver_{name}_3")
 
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        cursor.execute("""
-            INSERT INTO drivers (name, district, town, phone, truck_name,
-                                 location, image1, image2, image3)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
-        """, (name, district, town, phone, truck_name,
-              location, url1, url2, url3))
-        conn.commit()
-        cursor.close()
-        conn.close()
+            conn = get_db_connection()
+            cursor = conn.cursor()
+            cursor.execute("""
+                INSERT INTO drivers (name, district, town, phone, truck_name,
+                                     location, image1, image2, image3)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+            """, (name, district, town, phone, truck_name,
+                  location, url1, url2, url3))
+            conn.commit()
+            cursor.close()
+            conn.close()
 
-        return "Driver information saved successfully"
+            return "Driver information saved successfully"
+        except Exception as e:
+            print(f"ERROR in driver registration: {str(e)}")
+            print(traceback.format_exc())
+            return f"Error: {str(e)}", 500
     else:
         return render_template("driverdetails.html")
 
@@ -380,32 +392,38 @@ def alldrivers():
 def deals():
     return render_template("dealsform.html")
 
+# CHANGED: Added try-except block for better error handling
 @app.route("/save", methods=["POST"])
 def save():
-    suppliername = request.form["suppliername"]
-    materialname = request.form["materialname"]
-    tippername = request.form["tippername"]
-    location = request.form["location"]
-    phone = request.form["phone"]
+    try:
+        suppliername = request.form["suppliername"]
+        materialname = request.form["materialname"]
+        tippername = request.form["tippername"]
+        location = request.form["location"]
+        phone = request.form["phone"]
 
-    image1 = request.files.get("imageone")
-    image2 = request.files.get("image2")
+        image1 = request.files.get("imageone")
+        image2 = request.files.get("image2")
 
-    # These will now upload to Cloudinary automatically
-    url1 = save_image(image1, f"deal_{suppliername}_1")
-    url2 = save_image(image2, f"deal_{suppliername}_2")
+        # These will now upload to Cloudinary automatically
+        url1 = save_image(image1, f"deal_{suppliername}_1")
+        url2 = save_image(image2, f"deal_{suppliername}_2")
 
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute("""
-        INSERT INTO deals (suppliername, materialname, tippername, location, phone, imageone, imagetwo)
-        VALUES (%s, %s, %s, %s, %s, %s, %s)
-    """, (suppliername, materialname, tippername, location, phone, url1, url2))
-    conn.commit()
-    cursor.close()
-    conn.close()
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("""
+            INSERT INTO deals (suppliername, materialname, tippername, location, phone, imageone, imagetwo)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
+        """, (suppliername, materialname, tippername, location, phone, url1, url2))
+        conn.commit()
+        cursor.close()
+        conn.close()
 
-    return "Your deal has been uploaded successfully"
+        return "Your deal has been uploaded successfully"
+    except Exception as e:
+        print(f"ERROR in save deal: {str(e)}")
+        print(traceback.format_exc())
+        return f"Error: {str(e)}", 500
 
 @app.route("/table")
 def table():
@@ -454,34 +472,40 @@ def dealspage():
 def order_form():
     return render_template("order_form.html")
 
+# CHANGED: Added try-except block for better error handling
 @app.route("/submit_order", methods=["POST"])
 def submit_order():
-    name = request.form["name"]
-    district = request.form["district"]
-    town = request.form["town"]
-    truck_name = request.form["truck_name"]
-    material_service = request.form["material_service"]
-    location = request.form["location"]
-    phone = request.form["phone"]
+    try:
+        name = request.form["name"]
+        district = request.form["district"]
+        town = request.form["town"]
+        truck_name = request.form["truck_name"]
+        material_service = request.form["material_service"]
+        location = request.form["location"]
+        phone = request.form["phone"]
 
-    image1 = request.files.get("image1")
-    image2 = request.files.get("image2")
+        image1 = request.files.get("image1")
+        image2 = request.files.get("image2")
 
-    # These will now upload to Cloudinary automatically
-    url1 = save_image(image1, f"order_{name}_1")
-    url2 = save_image(image2, f"order_{name}_2")
+        # These will now upload to Cloudinary automatically
+        url1 = save_image(image1, f"order_{name}_1")
+        url2 = save_image(image2, f"order_{name}_2")
 
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute("""
-        INSERT INTO orders (name, district, town, truck_name, material_service, location, phone, image1, image2)
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
-    """, (name, district, town, truck_name, material_service, location, phone, url1, url2))
-    conn.commit()
-    cursor.close()
-    conn.close()
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("""
+            INSERT INTO orders (name, district, town, truck_name, material_service, location, phone, image1, image2)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+        """, (name, district, town, truck_name, material_service, location, phone, url1, url2))
+        conn.commit()
+        cursor.close()
+        conn.close()
 
-    return "Your order has been placed successfully! We will contact you soon."
+        return "Your order has been placed successfully! We will contact you soon."
+    except Exception as e:
+        print(f"ERROR in submit order: {str(e)}")
+        print(traceback.format_exc())
+        return f"Error: {str(e)}", 500
 
 @app.route("/view_orders")
 def view_orders():
@@ -511,46 +535,52 @@ def edit_order_form(order_id):
     conn.close()
     return render_template("edit_order.html", order=order)
 
+# CHANGED: Added try-except block for better error handling
 @app.route("/update_order/<int:order_id>", methods=["POST"])
 def update_order(order_id):
-    name = request.form["name"]
-    district = request.form["district"]
-    town = request.form["town"]
-    truck_name = request.form["truck_name"]
-    material_service = request.form["material_service"]
-    location = request.form["location"]
-    phone = request.form["phone"]
+    try:
+        name = request.form["name"]
+        district = request.form["district"]
+        town = request.form["town"]
+        truck_name = request.form["truck_name"]
+        material_service = request.form["material_service"]
+        location = request.form["location"]
+        phone = request.form["phone"]
 
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute("SELECT image1, image2 FROM orders WHERE id = %s", (order_id,))
-    old = cursor.fetchone()
-    if not old:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT image1, image2 FROM orders WHERE id = %s", (order_id,))
+        old = cursor.fetchone()
+        if not old:
+            cursor.close()
+            conn.close()
+            return "Order not found", 404
+        old_image1, old_image2 = old
+
+        image1 = request.files.get("image1")
+        image2 = request.files.get("image2")
+
+        url1 = old_image1
+        if image1 and image1.filename:
+            url1 = save_image(image1, f"order_{name}_1")
+
+        url2 = old_image2
+        if image2 and image2.filename:
+            url2 = save_image(image2, f"order_{name}_2")
+
+        cursor.execute("""
+            UPDATE orders
+            SET name=%s, district=%s, town=%s, truck_name=%s, material_service=%s, location=%s, phone=%s, image1=%s, image2=%s
+            WHERE id=%s
+        """, (name, district, town, truck_name, material_service, location, phone, url1, url2, order_id))
+        conn.commit()
         cursor.close()
         conn.close()
-        return "Order not found", 404
-    old_image1, old_image2 = old
-
-    image1 = request.files.get("image1")
-    image2 = request.files.get("image2")
-
-    url1 = old_image1
-    if image1 and image1.filename:
-        url1 = save_image(image1, f"order_{name}_1")
-
-    url2 = old_image2
-    if image2 and image2.filename:
-        url2 = save_image(image2, f"order_{name}_2")
-
-    cursor.execute("""
-        UPDATE orders
-        SET name=%s, district=%s, town=%s, truck_name=%s, material_service=%s, location=%s, phone=%s, image1=%s, image2=%s
-        WHERE id=%s
-    """, (name, district, town, truck_name, material_service, location, phone, url1, url2, order_id))
-    conn.commit()
-    cursor.close()
-    conn.close()
-    return redirect(url_for('view_orders'))
+        return redirect(url_for('view_orders'))
+    except Exception as e:
+        print(f"ERROR in update order: {str(e)}")
+        print(traceback.format_exc())
+        return f"Error: {str(e)}", 500
 
 @app.route("/delete_order/<int:order_id>")
 def delete_order(order_id):
