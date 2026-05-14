@@ -1,7 +1,7 @@
 from flask import Flask, request, render_template, redirect, url_for, send_from_directory
 from twilio.twiml.messaging_response import MessagingResponse
 from werkzeug.utils import secure_filename
-import psycop2
+import psycopg2
 import os
 import cloudinary
 import cloudinary.uploader
