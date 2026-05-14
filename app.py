@@ -122,10 +122,14 @@ def get_db_connection():
 # Create all tables (with location columns)
 # -------------------------
 def create_drivers_table():
+    """Create drivers table with location column"""
     conn = get_db_connection()
     cursor = conn.cursor()
+    # Drop existing table if it exists (WARNING: This deletes all existing data!)
+    cursor.execute("DROP TABLE IF EXISTS drivers CASCADE")
+    # Create table with all required columns including location
     cursor.execute("""
-        CREATE TABLE IF NOT EXISTS drivers (
+        CREATE TABLE drivers (
             id SERIAL PRIMARY KEY,
             name TEXT,
             district TEXT,
@@ -142,6 +146,7 @@ def create_drivers_table():
     conn.commit()
     cursor.close()
     conn.close()
+    print("Drivers table recreated successfully with location column")
 
 def create_deals_table():
     conn = get_db_connection()
