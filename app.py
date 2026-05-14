@@ -1,13 +1,28 @@
 from flask import Flask, request, render_template, redirect, url_for, send_from_directory
 from twilio.twiml.messaging_response import MessagingResponse
 from werkzeug.utils import secure_filename
-import psycopg2
+import psycop2
 import os
+import cloudinary
+import cloudinary.uploader
+import cloudinary.api
+from io import BytesIO
 
 app = Flask(__name__)
 
 # -------------------------
-# Local File Upload Configuration
+# Cloudinary Configuration
+# -------------------------
+# You need to set these environment variables or replace with your actual credentials
+cloudinary.config(
+    cloud_name=os.environ.get("CLOUDINARY_CLOUD_NAME", "your_cloud_name"),
+    api_key=os.environ.get("CLOUDINARY_API_KEY", "your_api_key"),
+    api_secret=os.environ.get("CLOUDINARY_API_SECRET", "your_api_secret"),
+    secure=True
+)
+
+# -------------------------
+# Local File Upload Configuration (fallback)
 # -------------------------
 UPLOAD_FOLDER = 'static/uploads'
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'bmp', 'webp'}
@@ -17,19 +32,68 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
-def save_image(file, prefix=""):
+def upload_to_cloudinary(file, prefix=""):
+    """
+    Upload image to Cloudinary and return the URL.
+    Falls back to local storage if Cloudinary fails.
+    """
+    if not file or not file.filename:
+        return ""
+    
+    if not allowed_file(file.filename):
+        raise ValueError("File type not allowed")
+    
+    try:
+        # Read file content
+        file_content = file.read()
+        
+        # Create a BytesIO object to re-upload
+        file_stream = BytesIO(file_content)
+        file_stream.seek(0)
+        
+        # Create a filename for Cloudinary
+        filename = secure_filename(file.filename)
+        if prefix:
+            name, ext = os.path.splitext(filename)
+            filename = f"{prefix}_{name}{ext}"
+        
+        # Upload to Cloudinary
+        upload_result = cloudinary.uploader.upload(
+            file_stream,
+            public_id=filename.replace('.', '_'),  # Remove extension for public_id
+            folder="driver_app",  # Organize images in a folder
+            resource_type="image"
+        )
+        
+        # Return the secure URL
+        return upload_result['secure_url']
+    
+    except Exception as e:
+        print(f"Cloudinary upload failed: {e}. Falling back to local storage.")
+        # Fallback to local storage
+        file.seek(0)  # Reset file pointer
+        return save_image_local(file, prefix)
+
+def save_image_local(file, prefix=""):
     """Save uploaded file locally and return its URL path."""
     if not file or not file.filename:
         return ""
     if not allowed_file(file.filename):
         raise ValueError("File type not allowed")
+    
     filename = secure_filename(file.filename)
     if prefix:
         name, ext = os.path.splitext(filename)
         filename = f"{prefix}_{name}{ext}"
+    
     filepath = os.path.join(UPLOAD_FOLDER, filename)
     file.save(filepath)
     return f"/uploads/{filename}"
+
+# For backward compatibility
+def save_image(file, prefix=""):
+    """Upload to Cloudinary by default"""
+    return upload_to_cloudinary(file, prefix)
 
 # -------------------------
 # Database connection (local)
@@ -67,7 +131,6 @@ def create_drivers_table():
             image2 TEXT,
             image3 TEXT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    
         )
     """)
     conn.commit()
@@ -116,21 +179,20 @@ def create_orders_table():
     cursor.close()
     conn.close()
 
-
 # Create all tables when app starts
 create_drivers_table()
 create_deals_table()
 create_orders_table()
 
 # -------------------------
-# Serve uploaded files
+# Serve uploaded files (for local fallback)
 # -------------------------
 @app.route('/uploads/<filename>')
 def uploaded_file(filename):
     return send_from_directory(UPLOAD_FOLDER, filename)
 
 # -------------------------
-# Routes (unchanged except /driver POST)
+# Routes
 # -------------------------
 
 @app.route("/")
@@ -246,7 +308,7 @@ def kampala_ntinda():
     return render_template("kampala_ntinda_supplires.html")
 
 # -------------------------
-# Driver Registration (UPDATED to handle location)
+# Driver Registration (UPDATED for Cloudinary)
 # -------------------------
 @app.route("/driverdetails")
 def driverdetails():
@@ -261,14 +323,12 @@ def driver():
         phone = request.form["phone"]
         truck_name = request.form["truck_name"]
         location = request.form["location"]
-    
-
-       
 
         image1 = request.files.get("image1")
         image2 = request.files.get("image2")
         image3 = request.files.get("image3")
 
+        # These will now upload to Cloudinary automatically
         url1 = save_image(image1, f"driver_{name}_1")
         url2 = save_image(image2, f"driver_{name}_2")
         url3 = save_image(image3, f"driver_{name}_3")
@@ -277,10 +337,10 @@ def driver():
         cursor = conn.cursor()
         cursor.execute("""
             INSERT INTO drivers (name, district, town, phone, truck_name,
-                                 location,image1, image2, image3)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s,%s)
+                                 location, image1, image2, image3)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
         """, (name, district, town, phone, truck_name,
-              location,url1, url2, url3))
+              location, url1, url2, url3))
         conn.commit()
         cursor.close()
         conn.close()
@@ -314,7 +374,7 @@ def alldrivers():
     return render_template("alldriversview.html", data=data)
 
 # -------------------------
-# Deals Section (unchanged)
+# Deals Section (UPDATED for Cloudinary)
 # -------------------------
 @app.route("/deals")
 def deals():
@@ -331,6 +391,7 @@ def save():
     image1 = request.files.get("imageone")
     image2 = request.files.get("image2")
 
+    # These will now upload to Cloudinary automatically
     url1 = save_image(image1, f"deal_{suppliername}_1")
     url2 = save_image(image2, f"deal_{suppliername}_2")
 
@@ -387,7 +448,7 @@ def dealspage():
     return render_template("dealspage.html")
 
 # -------------------------
-# Orders Table (unchanged)
+# Orders Table (UPDATED for Cloudinary)
 # -------------------------
 @app.route("/order")
 def order_form():
@@ -406,6 +467,7 @@ def submit_order():
     image1 = request.files.get("image1")
     image2 = request.files.get("image2")
 
+    # These will now upload to Cloudinary automatically
     url1 = save_image(image1, f"order_{name}_1")
     url2 = save_image(image2, f"order_{name}_2")
 
@@ -549,8 +611,7 @@ def search_driversby():
 
     return render_template("drivers_results.html", drivers=drivers)
 
-# ROUTE  THAT CREATES A LINK TO A PARTICULAR DRIVER CARD DETAILS
-
+# Route that creates a link to a particular driver card details
 @app.route('/driver_details/<int:driver_id>')
 def driver_details(driver_id):
     conn = get_db_connection()
