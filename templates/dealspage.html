@@ -3,7 +3,7 @@
 <head>
     <meta charset='utf-8'>
     <meta http-equiv='X-UA-Compatible' content='IE=edge'>
-    <title>Page Title</title>
+    <title>Deals Page</title>
     <meta name='viewport' content='width=device-width, initial-scale=1'>
     <link rel='stylesheet' type='text/css' media='screen' href='main.css'>
     <script src='main.js'></script>
@@ -15,7 +15,6 @@
             box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
             overflow: hidden;
             margin-bottom:0;
-		
         }
 
         .menu-bar {
@@ -34,6 +33,7 @@
 
         .menu-item a{
             text-decoration: none;
+            display: block;
         }
 
         .menu-item:last-child {
@@ -66,9 +66,7 @@
             color: rgba(255, 255, 255, 0.9);
         }
 
-     /* Responsive Design for the menue */
-	 
-	 
+        /* Responsive Design for the menu */
         @media (max-width: 768px) {
             .menu-bar {
                 flex-direction: column;
@@ -105,31 +103,25 @@
                 font-size: 1.7rem;
             }
         }
-
-
     </style>
 </head>
 <body>
     <div class="menu-container">
-            <div class="menu-bar">
-
-               
-                <div class="menu-item active">
-                    <a href="{{url_for('deals')}}">
+        <div class="menu-bar">
+            <div class="menu-item active">
+                <a href="/deals">
                     <h2>UPLOAD DEAL</h2>
                     <p>sale your deal here</p>
-                    </a>
-                </div>
-                
-
-                <div class="menu-item">
-                    <a href="{{url_for('dealstocustomer')}}">
+                </a>
+            </div>
+            
+            <div class="menu-item">
+                <a href="/dealstocustomer">
                     <h2>VIEW DEALS ON WHEELS</h2>
                     <p>see the available deals</p>
-                    </a>
-                </div>
-                
+                </a>
             </div>
         </div>
+    </div>
 </body>
 </html>
