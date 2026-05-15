@@ -1,32 +1,91 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Deals Form</title>
+    <style>
+        body{font-family:Arial;background:#f4f4f4;}
+        form{background:white;padding:20px;width:400px;margin:auto;margin-top:40px;border-radius:10px;}
+        input{width:100%;padding:10px;margin:8px 0;}
+        button{background:green;color:white;padding:10px;border:none;width:100%;}
+        .location-status{background:#f0f0f0;padding:10px;margin:10px 0;border-radius:5px;font-size:14px;text-align:center;}
+        .location-captured{color:green;font-weight:bold;}
+        .location-error{color:red;font-weight:bold;}
+    </style>
+</head>
+<body>
+
+<form action="/save" method="POST" enctype="multipart/form-data">
+    <h2>Enter Deal Info</h2>
+
+    <input type="text" name="suppliername" placeholder="Supplier Name" required>
+    <input type="text" name="materialname" placeholder="Material Name" required>
+    <input type="text" name="tippername" placeholder="Tipper Name" required>
+    <input type="text" name="location" placeholder="Location" required>
+    <input type="text" name="phone" placeholder="Phone" required>
+
+    <!-- Hidden fields for live location -->
+    <input type="hidden" id="live_latitude" name="live_latitude">
+    <input type="hidden" id="live_longitude" name="live_longitude">
+    
+    <!-- Location status display -->
+    <div id="location_status" class="location-status">📍 Getting your location...</div>
+
+    Image One:
+    <input type="file" name="imageone" required>
+
+    Image Two:
+    <input type="file" name="image2" required>
+
+    <button type="submit">Save Deal</button>
+</form>
+
 <script>
-// Get user's live location
+// Get user's live location when page loads
 function getLiveLocation() {
     if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(
             function(position) {
+                // Set the hidden input values
                 document.getElementById('live_latitude').value = position.coords.latitude;
                 document.getElementById('live_longitude').value = position.coords.longitude;
+                
+                // Update status display
                 document.getElementById('location_status').innerHTML = 
-                    '✅ Location captured: ' + position.coords.latitude + ', ' + position.coords.longitude;
+                    '✅ Location captured: ' + position.coords.latitude.toFixed(6) + ', ' + position.coords.longitude.toFixed(6);
+                document.getElementById('location_status').className = 'location-status location-captured';
             },
             function(error) {
+                let errorMessage = '';
+                switch(error.code) {
+                    case error.PERMISSION_DENIED:
+                        errorMessage = 'Location access denied. Please allow location access.';
+                        break;
+                    case error.POSITION_UNAVAILABLE:
+                        errorMessage = 'Location information unavailable.';
+                        break;
+                    case error.TIMEOUT:
+                        errorMessage = 'Location request timed out.';
+                        break;
+                    default:
+                        errorMessage = 'Unknown error getting location.';
+                }
                 document.getElementById('location_status').innerHTML = 
-                    '❌ Error getting location: ' + error.message;
+                    '❌ ' + errorMessage + ' You can still submit the form without location.';
+                document.getElementById('location_status').className = 'location-status location-error';
             }
         );
     } else {
         document.getElementById('location_status').innerHTML = 
-            '❌ Geolocation is not supported by this browser';
+            '❌ Geolocation is not supported by your browser. You can still submit the form without location.';
+        document.getElementById('location_status').className = 'location-status location-error';
     }
 }
 
-// Call this when page loads or when user clicks a button
+// Call the function when page loads
 window.onload = function() {
     getLiveLocation();
 }
 </script>
 
-<!-- Add hidden fields to your form -->
-<input type="hidden" id="live_latitude" name="live_latitude">
-<input type="hidden" id="live_longitude" name="live_longitude">
-<div id="location_status">Getting your location...</div>
+</body>
+</html>
