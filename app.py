@@ -184,10 +184,29 @@ def create_orders_table():
     cursor.close()
     conn.close()
 
+def create_tracking_table():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS deal_tracking (
+            id SERIAL PRIMARY KEY,
+            deal_id INTEGER REFERENCES deals(id),
+            latitude DOUBLE PRECISION,
+            longitude DOUBLE PRECISION,
+            accuracy DOUBLE PRECISION,
+            timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    conn.commit()
+    cursor.close()
+    conn.close()
+
+
 # Create all tables when app starts
 create_drivers_table()
 create_deals_table()
 create_orders_table()
+create_tracking_table()
 
 # Fix existing tables - add missing columns
 def fix_existing_tables():
@@ -277,6 +296,144 @@ def home():
     cursor.close()
     conn.close()
     return render_template("sofery.html", drivers=drivers)
+
+
+# UPDATE LIVE LOCATION FOR DEALS
+
+@app.route('/update_live_location/<int:deal_id>', methods=['POST'])
+def update_live_location(deal_id):
+    """Receive live location updates from the user's phone"""
+    try:
+        data = request.get_json()
+        latitude = data.get('latitude')
+        longitude = data.get('longitude')
+        accuracy = data.get('accuracy', 0)
+        
+        # Save to tracking table
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("""
+            INSERT INTO deal_tracking (deal_id, latitude, longitude, accuracy)
+            VALUES (%s, %s, %s, %s)
+        """, (deal_id, latitude, longitude, accuracy))
+        
+        # Also update the main deals table with latest location
+        cursor.execute("""
+            UPDATE deals 
+            SET live_latitude = %s, live_longitude = %s 
+            WHERE id = %s
+        """, (latitude, longitude, deal_id))
+        
+        conn.commit()
+        cursor.close()
+        conn.close()
+        
+        return jsonify({"status": "success"}), 200
+    except Exception as e:
+        print(f"Error updating location: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route('/get_deal_location/<int:deal_id>')
+def get_deal_location(deal_id):
+    """Get the latest location for a specific deal"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT latitude, longitude, timestamp, accuracy 
+        FROM deal_tracking 
+        WHERE deal_id = %s 
+        ORDER BY timestamp DESC 
+        LIMIT 1
+    """, (deal_id,))
+    location = cursor.fetchone()
+    cursor.close()
+    conn.close()
+    
+    if location:
+        return jsonify({
+            "latitude": location[0],
+            "longitude": location[1],
+            "timestamp": location[2],
+            "accuracy": location[3]
+        })
+    return jsonify({"error": "No location found"}), 404
+
+@app.route('/get_deal_tracking_history/<int:deal_id>')
+def get_deal_tracking_history(deal_id):
+    """Get full movement history for a deal"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT latitude, longitude, timestamp, accuracy 
+        FROM deal_tracking 
+        WHERE deal_id = %s 
+        ORDER BY timestamp ASC
+    """, (deal_id,))
+    history = cursor.fetchall()
+    cursor.close()
+    conn.close()
+    
+    return jsonify([{
+        "latitude": h[0],
+        "longitude": h[1],
+        "timestamp": h[2],
+        "accuracy": h[3]
+    } for h in history])
+
+# API endpoints for admin live tracking
+@app.route("/api/deal_locations")
+def get_all_deal_locations():
+    """API endpoint to get all active deals with their latest locations"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT d.id, d.suppliername, d.materialname, d.tippername, d.phone,
+               d.live_latitude, d.live_longitude,
+               dt.latitude as last_latitude, 
+               dt.longitude as last_longitude,
+               dt.timestamp as last_update
+        FROM deals d
+        LEFT JOIN (
+            SELECT DISTINCT ON (deal_id) deal_id, latitude, longitude, timestamp
+            FROM deal_tracking
+            ORDER BY deal_id, timestamp DESC
+        ) dt ON d.id = dt.deal_id
+        WHERE d.live_latitude IS NOT NULL OR dt.latitude IS NOT NULL
+        ORDER BY d.created_at DESC
+    """)
+    rows = cursor.fetchall()
+    columns = [desc[0] for desc in cursor.description]
+    deals = [dict(zip(columns, row)) for row in rows]
+    cursor.close()
+    conn.close()
+    return jsonify(deals)
+
+@app.route("/api/deal_tracking/<int:deal_id>")
+def get_deal_tracking_api(deal_id):
+    """API endpoint to get tracking history for a specific deal"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT latitude, longitude, timestamp, accuracy 
+        FROM deal_tracking 
+        WHERE deal_id = %s 
+        ORDER BY timestamp ASC
+    """, (deal_id,))
+    history = cursor.fetchall()
+    cursor.close()
+    conn.close()
+    
+    return jsonify([{
+        "latitude": h[0],
+        "longitude": h[1],
+        "timestamp": h[2],
+        "accuracy": h[3]
+    } for h in history])
+
+@app.route("/track_deal/<int:deal_id>")
+def track_deal(deal_id):
+    """Dedicated tracking page for a specific deal"""
+    return render_template("deal_tracking.html", deal_id=deal_id)
 
 @app.route('/prospect')
 def prospect():
@@ -502,90 +659,14 @@ def save():
         conn.close()
 
         # Return success with deal ID for tracking
-        tracking_url = request.url_root.rstrip('/') + f"/track_deal/{deal_id}"
         return f"""Your deal has been uploaded successfully!
         
-        Track your deal location live at: {tracking_url}
-        Bookmark this link to see your location as you move!"""
+        Tracking URL: {request.url_root}track_deal/{deal_id}
+        Share this link to track this deal live!"""
     except Exception as e:
         print(f"ERROR in save deal: {str(e)}")
         print(traceback.format_exc())
         return f"Error: {str(e)}", 500
-
-@app.route("/track_deal/<int:deal_id>")
-def track_deal(deal_id):
-    """Page where the person who registered the deal can see their own live location"""
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM deals WHERE id = %s", (deal_id,))
-    row = cursor.fetchone()
-    
-    if not row:
-        cursor.close()
-        conn.close()
-        return "Deal not found", 404
-    
-    columns = [desc[0] for desc in cursor.description]
-    deal_dict = dict(zip(columns, row))
-    
-    cursor.close()
-    conn.close()
-    
-    return render_template("deal_tracking.html", deal=deal_dict, deal_id=deal_id)
-
-@app.route("/update_my_location/<int:deal_id>", methods=['POST'])
-def update_my_location(deal_id):
-    """Update location for the deal - only for the device that registered it"""
-    try:
-        data = request.get_json()
-        latitude = data.get('latitude')
-        longitude = data.get('longitude')
-        
-        if not latitude or not longitude:
-            return jsonify({"status": "error", "message": "Invalid coordinates"}), 400
-        
-        # Update the deals table with the new location
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        cursor.execute("""
-            UPDATE deals 
-            SET live_latitude = %s, live_longitude = %s 
-            WHERE id = %s
-        """, (latitude, longitude, deal_id))
-        conn.commit()
-        cursor.close()
-        conn.close()
-        
-        return jsonify({"status": "success"}), 200
-    except Exception as e:
-        print(f"Error updating location: {e}")
-        return jsonify({"status": "error", "message": str(e)}), 500
-
-@app.route("/get_my_location/<int:deal_id>")
-def get_my_location(deal_id):
-    """Get the latest location for the deal"""
-    try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        cursor.execute("""
-            SELECT live_latitude, live_longitude, created_at 
-            FROM deals 
-            WHERE id = %s
-        """, (deal_id,))
-        location = cursor.fetchone()
-        cursor.close()
-        conn.close()
-        
-        if location and location[0] and location[1]:
-            return jsonify({
-                "latitude": location[0],
-                "longitude": location[1],
-                "last_update": location[2]
-            })
-        return jsonify({"error": "No location found"}), 404
-    except Exception as e:
-        print(f"Error getting location: {e}")
-        return jsonify({"error": str(e)}), 500
 
 @app.route("/table")
 def table():
@@ -613,9 +694,24 @@ def dealstocustomer():
 
 @app.route("/dealstoadmin")
 def dealstoadmin():
+    """Admin view with live map tracking"""
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM deals")
+    # Get deals with their latest tracking info
+    cursor.execute("""
+        SELECT d.*, 
+               dt.latitude as last_latitude, 
+               dt.longitude as last_longitude,
+               dt.timestamp as last_update,
+               dt.accuracy as last_accuracy
+        FROM deals d
+        LEFT JOIN (
+            SELECT DISTINCT ON (deal_id) deal_id, latitude, longitude, timestamp, accuracy
+            FROM deal_tracking
+            ORDER BY deal_id, timestamp DESC
+        ) dt ON d.id = dt.deal_id
+        ORDER BY d.created_at DESC
+    """)
     rows = cursor.fetchall()
     columns = [desc[0] for desc in cursor.description]
     data = [dict(zip(columns, row)) for row in rows]
