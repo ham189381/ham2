@@ -7,14 +7,13 @@ import cloudinary
 import cloudinary.uploader
 import cloudinary.api
 from io import BytesIO
-import traceback  # ADDED: for better error logging
+import traceback
 
 app = Flask(__name__)
 
 # -------------------------
 # Cloudinary Configuration
 # -------------------------
-# CHANGED: Removed hardcoded defaults, now only uses environment variables
 cloudinary.config(
     cloud_name=os.environ.get("CLOUDINARY_CLOUD_NAME"),
     api_key=os.environ.get("CLOUDINARY_API_KEY"),
@@ -99,13 +98,10 @@ def save_image(file, prefix=""):
 # -------------------------
 # Database connection (local)
 # -------------------------
-# CHANGED: Fixed database connection for Render compatibility
 def get_db_connection():
     """Return a PostgreSQL connection for local development or production."""
     database_url = os.environ.get("DATABASE_URL")
     if database_url:
-        # Render provides DATABASE_URL, but it might start with postgres://
-        # Psycopg2 requires postgresql://
         if database_url.startswith("postgres://"):
             database_url = database_url.replace("postgres://", "postgresql://", 1)
         return psycopg2.connect(database_url)
@@ -153,6 +149,8 @@ def create_deals_table():
             materialname TEXT,
             tippername TEXT,
             location TEXT,
+            live_latitude DOUBLE PRECISION,
+            live_longitude DOUBLE PRECISION,
             phone TEXT,
             imageone TEXT,
             imagetwo TEXT,
@@ -185,7 +183,7 @@ def create_orders_table():
     cursor.close()
     conn.close()
 
-# Create tables
+# Create all tables when app starts
 create_drivers_table()
 create_deals_table()
 create_orders_table()
@@ -214,7 +212,48 @@ def fix_existing_tables():
         cursor.close()
         conn.close()
 
+# Migrate deals table to add live location columns
+def migrate_deals_table():
+    """Add live location columns to deals table if they don't exist"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        # Check and add live_latitude column
+        cursor.execute("""
+            SELECT EXISTS (
+                SELECT 1 
+                FROM information_schema.columns 
+                WHERE table_name='deals' AND column_name='live_latitude'
+            )
+        """)
+        if not cursor.fetchone()[0]:
+            cursor.execute("ALTER TABLE deals ADD COLUMN live_latitude DOUBLE PRECISION")
+            conn.commit()
+            print("Added live_latitude column to deals table")
+        
+        # Check and add live_longitude column
+        cursor.execute("""
+            SELECT EXISTS (
+                SELECT 1 
+                FROM information_schema.columns 
+                WHERE table_name='deals' AND column_name='live_longitude'
+            )
+        """)
+        if not cursor.fetchone()[0]:
+            cursor.execute("ALTER TABLE deals ADD COLUMN live_longitude DOUBLE PRECISION")
+            conn.commit()
+            print("Added live_longitude column to deals table")
+            
+    except Exception as e:
+        print(f"Migration note: {e}")
+        conn.rollback()
+    finally:
+        cursor.close()
+        conn.close()
+
 fix_existing_tables()
+migrate_deals_table()
+
 # -------------------------
 # Serve uploaded files (for local fallback)
 # -------------------------
@@ -345,7 +384,6 @@ def kampala_ntinda():
 def driverdetails():
     return render_template("driverdetails.html")
 
-# CHANGED: Added try-except block for better error handling
 @app.route("/driver", methods=["GET", "POST"])
 def driver():
     if request.method == "POST":
@@ -411,13 +449,12 @@ def alldrivers():
     return render_template("alldriversview.html", data=data)
 
 # -------------------------
-# Deals Section (UPDATED for Cloudinary)
+# Deals Section (UPDATED for Cloudinary with Live Location)
 # -------------------------
 @app.route("/deals")
 def deals():
     return render_template("dealsform.html")
 
-# CHANGED: Added try-except block for better error handling
 @app.route("/save", methods=["POST"])
 def save():
     try:
@@ -426,20 +463,34 @@ def save():
         tippername = request.form["tippername"]
         location = request.form["location"]
         phone = request.form["phone"]
+        
+        # Get live location from form (sent from frontend)
+        live_latitude = request.form.get("live_latitude")
+        live_longitude = request.form.get("live_longitude")
+        
+        # Convert to None if empty string
+        if live_latitude == "" or live_latitude is None:
+            live_latitude = None
+        else:
+            live_latitude = float(live_latitude)
+            
+        if live_longitude == "" or live_longitude is None:
+            live_longitude = None
+        else:
+            live_longitude = float(live_longitude)
 
         image1 = request.files.get("imageone")
         image2 = request.files.get("image2")
 
-        # These will now upload to Cloudinary automatically
         url1 = save_image(image1, f"deal_{suppliername}_1")
         url2 = save_image(image2, f"deal_{suppliername}_2")
 
         conn = get_db_connection()
         cursor = conn.cursor()
         cursor.execute("""
-            INSERT INTO deals (suppliername, materialname, tippername, location, phone, imageone, imagetwo)
-            VALUES (%s, %s, %s, %s, %s, %s, %s)
-        """, (suppliername, materialname, tippername, location, phone, url1, url2))
+            INSERT INTO deals (suppliername, materialname, tippername, location, live_latitude, live_longitude, phone, imageone, imagetwo)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+        """, (suppliername, materialname, tippername, location, live_latitude, live_longitude, phone, url1, url2))
         conn.commit()
         cursor.close()
         conn.close()
@@ -497,7 +548,6 @@ def dealspage():
 def order_form():
     return render_template("order_form.html")
 
-# CHANGED: Added try-except block for better error handling
 @app.route("/submit_order", methods=["POST"])
 def submit_order():
     try:
@@ -560,7 +610,6 @@ def edit_order_form(order_id):
     conn.close()
     return render_template("edit_order.html", order=order)
 
-# CHANGED: Added try-except block for better error handling
 @app.route("/update_order/<int:order_id>", methods=["POST"])
 def update_order(order_id):
     try:
