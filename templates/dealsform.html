@@ -1,46 +1,297 @@
-<!-- Add this JavaScript to your dealsform.html -->
-<script>
-// Get user's current location when form loads
-window.addEventListener('DOMContentLoaded', () => {
-    if ("geolocation" in navigator) {
-        navigator.geolocation.getCurrentPosition(
-            (position) => {
-                document.getElementById('live_latitude').value = position.coords.latitude;
-                document.getElementById('live_longitude').value = position.coords.longitude;
-                document.getElementById('location-status').innerHTML = '✅ Location captured!';
-                document.getElementById('location-status').style.color = 'green';
-            },
-            (error) => {
-                document.getElementById('location-status').innerHTML = '⚠️ Unable to get location. Please enable GPS.';
-                document.getElementById('location-status').style.color = 'orange';
-            }
-        );
-    } else {
-        document.getElementById('location-status').innerHTML = '❌ Geolocation not supported';
-    }
-});
-
-// Start continuous tracking after form submission
-function startLiveTracking(dealId) {
-    setInterval(() => {
-        if ("geolocation" in navigator) {
-            navigator.geolocation.getCurrentPosition((position) => {
-                fetch(`/update_live_location/${dealId}`, {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({
-                        latitude: position.coords.latitude,
-                        longitude: position.coords.longitude,
-                        accuracy: position.coords.accuracy
-                    })
-                });
-            });
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Register Your Deal</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
         }
-    }, 10000); // Update every 10 seconds
-}
-</script>
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        
+        .card {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .header h1 {
+            color: #333;
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            color: #666;
+            font-size: 14px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+            font-size: 14px;
+        }
+        
+        input, select, textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+        
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .file-input {
+            padding: 10px;
+            background: #f8f9fa;
+        }
+        
+        .location-box {
+            background: #e8f5e9;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            border-left: 4px solid #4caf50;
+        }
+        
+        .location-status {
+            font-size: 13px;
+            margin-top: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .status-icon {
+            font-size: 16px;
+        }
+        
+        .btn-submit {
+            width: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 14px;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        
+        .btn-submit:hover {
+            transform: translateY(-2px);
+        }
+        
+        .info-text {
+            font-size: 12px;
+            color: #666;
+            margin-top: 5px;
+        }
+        
+        .required {
+            color: #f44336;
+        }
+        
+        @media (max-width: 480px) {
+            .card {
+                padding: 20px;
+            }
+            .header h1 {
+                font-size: 24px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <div class="header">
+                <h1>📦 Register Your Deal</h1>
+                <p>Fill in the details below to list your deal</p>
+            </div>
+            
+            <form action="/save" method="POST" enctype="multipart/form-data">
+                <!-- Deal Information -->
+                <div class="form-group">
+                    <label>Supplier Name <span class="required">*</span></label>
+                    <input type="text" name="suppliername" required placeholder="Enter your name or company name">
+                </div>
+                
+                <div class="form-group">
+                    <label>Material Name <span class="required">*</span></label>
+                    <input type="text" name="materialname" required placeholder="e.g., Sand, Stones, Cement, etc.">
+                </div>
+                
+                <div class="form-group">
+                    <label>Tipper Name <span class="required">*</span></label>
+                    <input type="text" name="tippername" required placeholder="Tipper truck driver name">
+                </div>
+                
+                <div class="form-group">
+                    <label>Location Description <span class="required">*</span></label>
+                    <input type="text" name="location" required placeholder="e.g., Kampala, Ntinda">
+                </div>
+                
+                <div class="form-group">
+                    <label>Phone Number <span class="required">*</span></label>
+                    <input type="tel" name="phone" required placeholder="e.g., 07XX XXX XXX">
+                </div>
+                
+                <!-- Location Capture Box -->
+                <div class="location-box">
+                    <div style="font-weight: bold; margin-bottom: 8px;">📍 Live Location Tracking</div>
+                    <div style="font-size: 13px; color: #555; margin-bottom: 10px;">
+                        We'll capture your current location to enable live tracking of your deal.
+                    </div>
+                    <div class="location-status" id="location-status">
+                        <span class="status-icon">📍</span>
+                        <span>Getting your location...</span>
+                    </div>
+                    <div class="info-text" style="margin-top: 8px;">
+                        ℹ️ After registration, you'll receive a tracking link to see your live location as you move.
+                    </div>
+                </div>
+                
+                <!-- Hidden fields for location coordinates -->
+                <input type="hidden" id="live_latitude" name="live_latitude">
+                <input type="hidden" id="live_longitude" name="live_longitude">
+                
+                <!-- Images -->
+                <div class="form-group">
+                    <label>Product Image 1</label>
+                    <input type="file" name="imageone" accept="image/*" class="file-input">
+                    <div class="info-text">Upload a photo of your product (optional)</div>
+                </div>
+                
+                <div class="form-group">
+                    <label>Product Image 2</label>
+                    <input type="file" name="image2" accept="image/*" class="file-input">
+                    <div class="info-text">Upload another photo (optional)</div>
+                </div>
+                
+                <button type="submit" class="btn-submit">✅ Register Deal</button>
+            </form>
+        </div>
+    </div>
 
-<!-- Add hidden fields to your form -->
-<input type="hidden" id="live_latitude" name="live_latitude">
-<input type="hidden" id="live_longitude" name="live_longitude">
-<div id="location-status" style="margin: 10px 0; font-size: 12px;">📍 Getting your location...</div>
+    <script>
+        // Get user's current location at registration time
+        window.addEventListener('DOMContentLoaded', () => {
+            const locationStatus = document.getElementById('location-status');
+            
+            if ("geolocation" in navigator) {
+                locationStatus.innerHTML = '<span class="status-icon">📍</span><span>Getting your location...</span>';
+                
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        const latitude = position.coords.latitude;
+                        const longitude = position.coords.longitude;
+                        const accuracy = position.coords.accuracy;
+                        
+                        // Set the hidden input values
+                        document.getElementById('live_latitude').value = latitude;
+                        document.getElementById('live_longitude').value = longitude;
+                        
+                        // Update status display
+                        locationStatus.innerHTML = `
+                            <span class="status-icon">✅</span>
+                            <span>Location captured! (Accuracy: ${accuracy.toFixed(0)}m)</span>
+                        `;
+                        locationStatus.style.color = '#2e7d32';
+                        
+                        console.log(`Location captured: ${latitude}, ${longitude}`);
+                    },
+                    (error) => {
+                        console.error('Geolocation error:', error);
+                        let errorMessage = '';
+                        let statusColor = '#ff9800';
+                        
+                        switch(error.code) {
+                            case error.PERMISSION_DENIED:
+                                errorMessage = 'Location permission denied. You can still register, but live tracking won\'t work.';
+                                break;
+                            case error.POSITION_UNAVAILABLE:
+                                errorMessage = 'Location unavailable. You can still register, but live tracking won\'t work.';
+                                break;
+                            case error.TIMEOUT:
+                                errorMessage = 'Location request timed out. You can still register.';
+                                break;
+                            default:
+                                errorMessage = 'Could not get location. You can still register.';
+                        }
+                        
+                        locationStatus.innerHTML = `
+                            <span class="status-icon">⚠️</span>
+                            <span>${errorMessage}</span>
+                        `;
+                        locationStatus.style.color = statusColor;
+                        
+                        // Set empty values
+                        document.getElementById('live_latitude').value = '';
+                        document.getElementById('live_longitude').value = '';
+                    },
+                    {
+                        enableHighAccuracy: true,
+                        timeout: 10000,
+                        maximumAge: 0
+                    }
+                );
+            } else {
+                locationStatus.innerHTML = `
+                    <span class="status-icon">❌</span>
+                    <span>Geolocation not supported. Live tracking won't be available.</span>
+                `;
+                locationStatus.style.color = '#f44336';
+            }
+        });
+        
+        // Optional: Show confirmation before submitting if location wasn't captured
+        document.querySelector('form').addEventListener('submit', (e) => {
+            const lat = document.getElementById('live_latitude').value;
+            const lng = document.getElementById('live_longitude').value;
+            
+            if (!lat || !lng) {
+                const confirmSubmit = confirm(
+                    '⚠️ Location was not captured. Live tracking will not work.\n\n' +
+                    'Do you still want to register this deal?'
+                );
+                if (!confirmSubmit) {
+                    e.preventDefault();
+                }
+            }
+        });
+    </script>
+</body>
+</html>
