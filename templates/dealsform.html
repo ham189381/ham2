@@ -5,85 +5,163 @@
     <style>
         body{font-family:Arial;background:#f4f4f4;}
         form{background:white;padding:20px;width:400px;margin:auto;margin-top:40px;border-radius:10px;}
-        input{width:100%;padding:10px;margin:8px 0;}
-        button{background:green;color:white;padding:10px;border:none;width:100%;}
-        .location-status{background:#f0f0f0;padding:10px;margin:10px 0;border-radius:5px;font-size:14px;text-align:center;}
-        .location-captured{color:green;font-weight:bold;}
-        .location-error{color:red;font-weight:bold;}
+        input, select{width:100%;padding:10px;margin:8px 0;}
+        button{background:green;color:white;padding:10px;border:none;width:100%;cursor:pointer;}
+        .location-status{padding:10px;margin:10px 0;border-radius:5px;text-align:center;}
+        .location-updating{background:#e3f2fd;color:#1976d2;}
+        .location-success{background:#d4edda;color:#155724;}
+        .location-error{background:#f8d7da;color:#721c24;}
+        .refresh-location{background:#2196F3;margin-top:5px;}
     </style>
 </head>
 <body>
 
-<form action="/save" method="POST" enctype="multipart/form-data">
+<form action="/save" method="POST" enctype="multipart/form-data" id="dealForm">
     <h2>Enter Deal Info</h2>
 
     <input type="text" name="suppliername" placeholder="Supplier Name" required>
     <input type="text" name="materialname" placeholder="Material Name" required>
     <input type="text" name="tippername" placeholder="Tipper Name" required>
-    <input type="text" name="location" placeholder="Location" required>
+    <input type="text" name="location" placeholder="Location (Town/Area)" required>
     <input type="text" name="phone" placeholder="Phone" required>
 
     <!-- Hidden fields for live location -->
     <input type="hidden" id="live_latitude" name="live_latitude">
     <input type="hidden" id="live_longitude" name="live_longitude">
     
-    <!-- Location status display -->
-    <div id="location_status" class="location-status">📍 Getting your location...</div>
+    <!-- Real-time location display -->
+    <div id="location_status" class="location-status location-updating">
+        <i class="fas fa-location-dot"></i> Tracking your location...
+    </div>
+    
+    <button type="button" onclick="refreshLocation()" class="refresh-location">
+        ↻ Update Location Now
+    </button>
 
     Image One:
     <input type="file" name="imageone" required>
 
     Image Two:
-    <input type="file" name="image2" required>
+    <input type="file" name="image2" required">
 
     <button type="submit">Save Deal</button>
 </form>
 
 <script>
-// Get user's live location when page loads
-function getLiveLocation() {
+let watchId = null;
+let currentLat = null;
+let currentLng = null;
+
+function startTrackingLocation() {
     if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(
+        // Watch position continuously
+        watchId = navigator.geolocation.watchPosition(
             function(position) {
-                // Set the hidden input values
-                document.getElementById('live_latitude').value = position.coords.latitude;
-                document.getElementById('live_longitude').value = position.coords.longitude;
+                // Update location in real-time
+                currentLat = position.coords.latitude;
+                currentLng = position.coords.longitude;
                 
-                // Update status display
+                // Update hidden fields
+                document.getElementById('live_latitude').value = currentLat;
+                document.getElementById('live_longitude').value = currentLng;
+                
+                // Update display
                 document.getElementById('location_status').innerHTML = 
-                    '✅ Location captured: ' + position.coords.latitude.toFixed(6) + ', ' + position.coords.longitude.toFixed(6);
-                document.getElementById('location_status').className = 'location-status location-captured';
+                    '✅ Live Location: ' + currentLat.toFixed(6) + ', ' + currentLng.toFixed(6) + 
+                    '<br><small>📍 Location updates automatically as you move</small>';
+                document.getElementById('location_status').className = 'location-status location-success';
             },
             function(error) {
-                let errorMessage = '';
+                let errorMsg = '';
                 switch(error.code) {
                     case error.PERMISSION_DENIED:
-                        errorMessage = 'Location access denied. Please allow location access.';
+                        errorMsg = 'Location access denied. Please enable location services.';
                         break;
                     case error.POSITION_UNAVAILABLE:
-                        errorMessage = 'Location information unavailable.';
+                        errorMsg = 'Location information unavailable.';
                         break;
                     case error.TIMEOUT:
-                        errorMessage = 'Location request timed out.';
+                        errorMsg = 'Location request timed out.';
                         break;
-                    default:
-                        errorMessage = 'Unknown error getting location.';
                 }
                 document.getElementById('location_status').innerHTML = 
-                    '❌ ' + errorMessage + ' You can still submit the form without location.';
+                    '❌ ' + errorMsg + '<br><small>You can still submit the form without location</small>';
                 document.getElementById('location_status').className = 'location-status location-error';
+            },
+            {
+                enableHighAccuracy: true,  // Use GPS if available
+                maximumAge: 0,             // Always get fresh location
+                timeout: 10000             // Timeout after 10 seconds
             }
         );
     } else {
         document.getElementById('location_status').innerHTML = 
-            '❌ Geolocation is not supported by your browser. You can still submit the form without location.';
+            '❌ Geolocation is not supported by your browser';
         document.getElementById('location_status').className = 'location-status location-error';
     }
 }
 
-// Call the function when page loads
+function refreshLocation() {
+    document.getElementById('location_status').innerHTML = '🔄 Refreshing location...';
+    document.getElementById('location_status').className = 'location-status location-updating';
+    
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+            function(position) {
+                currentLat = position.coords.latitude;
+                currentLng = position.coords.longitude;
+                
+                document.getElementById('live_latitude').value = currentLat;
+                document.getElementById('live_longitude').value = currentLng;
+                
+                document.getElementById('location_status').innerHTML = 
+                    '✅ Location updated: ' + currentLat.toFixed(6) + ', ' + currentLng.toFixed(6);
+                document.getElementById('location_status').className = 'location-status location-success';
+            },
+            function(error) {
+                document.getElementById('location_status').innerHTML = '❌ Failed to refresh location';
+                document.getElementById('location_status').className = 'location-status location-error';
+            }
+        );
+    }
+}
+
+// Form submission - get final location
+document.getElementById('dealForm').addEventListener('submit', function(e) {
+    // Get one final location before submitting
+    e.preventDefault();
+    
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+            function(position) {
+                // Final update before submission
+                document.getElementById('live_latitude').value = position.coords.latitude;
+                document.getElementById('live_longitude').value = position.coords.longitude;
+                
+                // Stop watching location
+                if (watchId) {
+                    navigator.geolocation.clearWatch(watchId);
+                }
+                
+                // Submit the form
+                document.getElementById('dealForm').submit();
+            },
+            function(error) {
+                // Submit anyway even if location fails
+                if (watchId) {
+                    navigator.geolocation.clearWatch(watchId);
+                }
+                document.getElementById('dealForm').submit();
+            }
+        );
+    } else {
+        document.getElementById('dealForm').submit();
+    }
+});
+
+// Start tracking when page loads
 window.onload = function() {
-    getLiveLocation();
+    startTrackingLocation();
 }
 </script>
 
