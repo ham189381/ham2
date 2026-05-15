@@ -174,3 +174,294 @@
             }
         }
     </style>
+</head>
+<body>
+    <div class="container">
+        <div class="deals-list">
+            <div class="header">
+                <h2>📦 Live Deal Tracking</h2>
+                <p>Click on any deal to track its location</p>
+            </div>
+            <div id="deals-list-content">
+                <!-- Deals will be loaded here -->
+                <div style="text-align: center; padding: 20px;">Loading deals...</div>
+            </div>
+        </div>
+        <div class="map-container">
+            <div id="map"></div>
+            <button class="refresh-btn" onclick="refreshLocations()">🔄 Refresh Locations</button>
+            <div id="deal-details" class="deal-details-panel"></div>
+        </div>
+    </div>
+
+    <script>
+        let map;
+        let markers = {};
+        let currentDealId = null;
+        let refreshInterval;
+        let trackingInterval = null;
+        
+        // Initialize map
+        function initMap() {
+            map = L.map('map').setView([0.3136, 32.5811], 12); // Kampala coordinates
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(map);
+        }
+        
+        // Load all deals
+        async function loadDeals() {
+            try {
+                const response = await fetch('/api/deal_locations');
+                const deals = await response.json();
+                displayDealsList(deals);
+                updateMapMarkers(deals);
+            } catch (error) {
+                console.error('Error loading deals:', error);
+            }
+        }
+        
+        // Display deals in sidebar
+        function displayDealsList(deals) {
+            const container = document.getElementById('deals-list-content');
+            if (deals.length === 0) {
+                container.innerHTML = '<div style="text-align: center; padding: 20px;">No active deals found</div>';
+                return;
+            }
+            
+            container.innerHTML = deals.map(deal => {
+                const hasLocation = deal.live_latitude || deal.last_latitude;
+                const lastUpdate = deal.last_update ? new Date(deal.last_update).toLocaleTimeString() : 'Never';
+                const status = hasLocation ? 'active' : 'inactive';
+                
+                return `
+                    <div class="deal-card" onclick="selectDeal(${deal.id})" data-deal-id="${deal.id}">
+                        <h3>
+                            <span class="status ${status}"></span>
+                            ${deal.suppliername}
+                            ${hasLocation ? '<span class="live-badge">LIVE</span>' : ''}
+                        </h3>
+                        <p><strong>Material:</strong> ${deal.materialname || 'N/A'}</p>
+                        <p><strong>Tipper:</strong> ${deal.tippername || 'N/A'}</p>
+                        <p><strong>Phone:</strong> ${deal.phone || 'N/A'}</p>
+                        <div class="location-time">
+                            📍 Last update: ${lastUpdate}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        // Update markers on map
+        function updateMapMarkers(deals) {
+            // Remove old markers
+            Object.values(markers).forEach(marker => marker.remove());
+            markers = {};
+            
+            deals.forEach(deal => {
+                const lat = deal.live_latitude || deal.last_latitude;
+                const lng = deal.live_longitude || deal.last_longitude;
+                
+                if (lat && lng) {
+                    const marker = L.marker([lat, lng]).addTo(map);
+                    marker.bindPopup(`
+                        <strong>${deal.suppliername}</strong><br>
+                        Material: ${deal.materialname}<br>
+                        Tipper: ${deal.tippername}<br>
+                        Phone: ${deal.phone}<br>
+                        <button onclick="selectDeal(${deal.id})" style="margin-top:5px;">View Details</button>
+                    `);
+                    marker.on('click', () => selectDeal(deal.id));
+                    markers[deal.id] = marker;
+                }
+            });
+        }
+        
+        // Select and track a specific deal
+        async function selectDeal(dealId) {
+            // Highlight selected deal in sidebar
+            document.querySelectorAll('.deal-card').forEach(card => {
+                card.classList.remove('active');
+                if (card.dataset.dealId == dealId) {
+                    card.classList.add('active');
+                }
+            });
+            
+            currentDealId = dealId;
+            
+            // Clear existing tracking interval
+            if (trackingInterval) {
+                clearInterval(trackingInterval);
+            }
+            
+            // Start tracking this deal
+            await showDealDetails(dealId);
+            startTrackingDeal(dealId);
+            
+            // Center map on the deal
+            const lat = document.querySelector(`.deal-card.active .status`) ? 
+                await getDealLocation(dealId) : null;
+            if (lat && lat.latitude) {
+                map.setView([lat.latitude, lat.longitude], 15);
+            }
+        }
+        
+        // Get single deal location
+        async function getDealLocation(dealId) {
+            try {
+                const response = await fetch(`/get_deal_location/${dealId}`);
+                if (response.ok) {
+                    return await response.json();
+                }
+            } catch (error) {
+                console.error('Error getting deal location:', error);
+            }
+            return null;
+        }
+        
+        // Show deal details with tracking history
+        async function showDealDetails(dealId) {
+            try {
+                // Get deal info
+                const dealsResponse = await fetch('/api/deal_locations');
+                const deals = await dealsResponse.json();
+                const deal = deals.find(d => d.id === dealId);
+                
+                // Get tracking history
+                const historyResponse = await fetch(`/api/deal_tracking/${dealId}`);
+                const history = await historyResponse.json();
+                
+                const panel = document.getElementById('deal-details');
+                panel.innerHTML = `
+                    <h4>📋 Deal Details</h4>
+                    <p><strong>Supplier:</strong> ${deal.suppliername}</p>
+                    <p><strong>Material:</strong> ${deal.materialname}</p>
+                    <p><strong>Tipper:</strong> ${deal.tippername}</p>
+                    <p><strong>Phone:</strong> ${deal.phone}</p>
+                    <hr>
+                    <h4>📍 Location History</h4>
+                    <div style="max-height: 200px; overflow-y: auto;">
+                        ${history.length > 0 ? history.slice(-5).reverse().map(h => `
+                            <div style="font-size: 11px; margin: 5px 0;">
+                                🕒 ${new Date(h.timestamp).toLocaleString()}<br>
+                                📍 ${h.latitude.toFixed(6)}, ${h.longitude.toFixed(6)}<br>
+                                🎯 Accuracy: ${h.accuracy ? h.accuracy.toFixed(0) + 'm' : 'N/A'}
+                            </div>
+                            <hr style="margin: 5px 0;">
+                        `).join('') : '<p>No location history yet</p>'}
+                    </div>
+                    ${history.length > 0 ? `
+                        <button onclick="showFullHistory(${dealId})" style="margin-top: 10px; width: 100%; padding: 5px; background: #667eea; color: white; border: none; border-radius: 5px; cursor: pointer;">
+                            View Full Route
+                        </button>
+                    ` : ''}
+                `;
+                panel.classList.add('show');
+                
+                // Draw route line if there's history
+                if (history.length > 1) {
+                    const routePoints = history.map(h => [h.latitude, h.longitude]);
+                    if (window.routeLine) {
+                        map.removeLayer(window.routeLine);
+                    }
+                    window.routeLine = L.polyline(routePoints, {color: 'blue', weight: 3}).addTo(map);
+                }
+            } catch (error) {
+                console.error('Error showing deal details:', error);
+            }
+        }
+        
+        // Show full history in a new view
+        async function showFullHistory(dealId) {
+            try {
+                const response = await fetch(`/api/deal_tracking/${dealId}`);
+                const history = await response.json();
+                
+                if (history.length === 0) {
+                    alert('No location history available');
+                    return;
+                }
+                
+                // Create bounds to fit all points
+                const bounds = L.latLngBounds(history.map(h => [h.latitude, h.longitude]));
+                map.fitBounds(bounds);
+                
+                // Highlight the route
+                if (window.routeLine) {
+                    map.removeLayer(window.routeLine);
+                }
+                window.routeLine = L.polyline(history.map(h => [h.latitude, h.longitude]), {
+                    color: 'red',
+                    weight: 4,
+                    opacity: 0.7
+                }).addTo(map);
+                
+                alert(`Showing complete route with ${history.length} tracking points`);
+            } catch (error) {
+                console.error('Error showing full history:', error);
+            }
+        }
+        
+        // Start real-time tracking for a deal
+        function startTrackingDeal(dealId) {
+            trackingInterval = setInterval(async () => {
+                const location = await getDealLocation(dealId);
+                if (location && !location.error) {
+                    // Update marker position
+                    if (markers[dealId]) {
+                        markers[dealId].setLatLng([location.latitude, location.longitude]);
+                    } else {
+                        // Create marker if it doesn't exist
+                        const marker = L.marker([location.latitude, location.longitude]).addTo(map);
+                        markers[dealId] = marker;
+                    }
+                    
+                    // Update popup content
+                    markers[dealId].bindPopup(`
+                        <strong>Live Location Updated</strong><br>
+                        Time: ${new Date(location.timestamp).toLocaleTimeString()}<br>
+                        Accuracy: ${location.accuracy ? location.accuracy.toFixed(0) + 'm' : 'N/A'}
+                    `);
+                    
+                    // Update the deal card timestamp
+                    const dealCard = document.querySelector(`.deal-card[data-deal-id="${dealId}"]`);
+                    if (dealCard) {
+                        const timeElement = dealCard.querySelector('.location-time');
+                        if (timeElement) {
+                            timeElement.innerHTML = `📍 Last update: ${new Date(location.timestamp).toLocaleTimeString()}`;
+                        }
+                    }
+                    
+                    // Refresh details panel
+                    await showDealDetails(dealId);
+                }
+            }, 5000); // Update every 5 seconds
+        }
+        
+        // Refresh all locations
+        async function refreshLocations() {
+            await loadDeals();
+            if (currentDealId) {
+                await showDealDetails(currentDealId);
+            }
+        }
+        
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            initMap();
+            loadDeals();
+            
+            // Refresh every 30 seconds
+            refreshInterval = setInterval(() => {
+                refreshLocations();
+            }, 30000);
+        });
+        
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', () => {
+            if (refreshInterval) clearInterval(refreshInterval);
+            if (trackingInterval) clearInterval(trackingInterval);
+        });
+    </script>
+</body>
+</html>
