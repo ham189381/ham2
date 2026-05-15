@@ -122,14 +122,10 @@ def get_db_connection():
 # Create all tables (with location columns)
 # -------------------------
 def create_drivers_table():
-    """Create drivers table with location column"""
     conn = get_db_connection()
     cursor = conn.cursor()
-    # Drop existing table if it exists (WARNING: This deletes all existing data!)
-    cursor.execute("DROP TABLE IF EXISTS drivers CASCADE")
-    # Create table with all required columns including location
     cursor.execute("""
-        CREATE TABLE drivers (
+        CREATE TABLE IF NOT EXISTS drivers (
             id SERIAL PRIMARY KEY,
             name TEXT,
             district TEXT,
@@ -146,7 +142,6 @@ def create_drivers_table():
     conn.commit()
     cursor.close()
     conn.close()
-    print("Drivers table recreated successfully with location column")
 
 def create_deals_table():
     conn = get_db_connection()
@@ -190,11 +185,36 @@ def create_orders_table():
     cursor.close()
     conn.close()
 
-# Create all tables when app starts
+# Create tables
 create_drivers_table()
 create_deals_table()
 create_orders_table()
 
+# Fix existing tables - add missing columns
+def fix_existing_tables():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        # Check if location column exists in drivers table
+        cursor.execute("""
+            SELECT EXISTS (
+                SELECT 1 
+                FROM information_schema.columns 
+                WHERE table_name='drivers' AND column_name='location'
+            )
+        """)
+        if not cursor.fetchone()[0]:
+            cursor.execute("ALTER TABLE drivers ADD COLUMN location TEXT")
+            conn.commit()
+            print("Added location column to drivers table")
+    except Exception as e:
+        print(f"Migration note: {e}")
+        conn.rollback()
+    finally:
+        cursor.close()
+        conn.close()
+
+fix_existing_tables()
 # -------------------------
 # Serve uploaded files (for local fallback)
 # -------------------------
