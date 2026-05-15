@@ -3,9 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>Available Deals on Wheels - Admin View</title>
+    <title>Available Deals on Wheels - Admin View with Live Tracking</title>
     <!-- Font Awesome for icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <!-- Leaflet CSS for maps (free, no API key needed) -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     
@@ -82,7 +85,7 @@
         /* Grid Layout */
         .deals-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(450px, 1fr));
             gap: 30px;
             margin-top: 20px;
         }
@@ -203,10 +206,10 @@
             box-shadow: 0 2px 8px rgba(0,0,0,0.1);
         }
 
-        .map-container iframe {
+        .live-map {
             width: 100%;
-            height: 200px;
-            display: block;
+            height: 300px;
+            background: #f0f0f0;
         }
 
         .location-link {
@@ -222,10 +225,36 @@
             font-weight: 500;
             transition: all 0.2s ease;
             margin-top: 10px;
+            margin-right: 10px;
         }
 
         .location-link:hover {
             background: #0b7dda;
+            transform: translateY(-2px);
+        }
+
+        .tracking-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: #28a745;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-size: 0.85rem;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            margin-top: 10px;
+            border: none;
+            cursor: pointer;
+        }
+
+        .tracking-btn.stop {
+            background: #dc3545;
+        }
+
+        .tracking-btn:hover {
             transform: translateY(-2px);
         }
 
@@ -245,6 +274,25 @@
             border-radius: 8px;
             font-size: 0.8rem;
             margin-top: 10px;
+        }
+
+        .live-status {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+
+        .status-active {
+            background: #28a745;
+            color: white;
+        }
+
+        .status-inactive {
+            background: #dc3545;
+            color: white;
         }
 
         /* Image Gallery */
@@ -407,6 +455,11 @@
             }
         }
 
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
         /* Responsive Design */
         @media (max-width: 768px) {
             body {
@@ -435,65 +488,9 @@
                 min-width: auto;
             }
 
-            .info-row {
-                flex-direction: column;
-                text-align: center;
+            .live-map {
+                height: 250px;
             }
-
-            .info-icon {
-                margin-bottom: 5px;
-            }
-
-            .image-gallery {
-                flex-direction: column;
-            }
-
-            .deal-image {
-                width: 100%;
-                height: 200px;
-            }
-
-            .card-footer {
-                flex-direction: column;
-            }
-
-            .call-btn, .price-tag {
-                width: 100%;
-                text-align: center;
-                justify-content: center;
-            }
-        }
-
-        @media (max-width: 480px) {
-            .header h2 {
-                font-size: 1.5rem;
-            }
-
-            .card-header h3 {
-                font-size: 1.2rem;
-            }
-
-            .map-container iframe {
-                height: 180px;
-            }
-        }
-
-        /* Scrollbar Styling */
-        ::-webkit-scrollbar {
-            width: 10px;
-        }
-
-        ::-webkit-scrollbar-track {
-            background: #f1f1f1;
-        }
-
-        ::-webkit-scrollbar-thumb {
-            background: #667eea;
-            border-radius: 5px;
-        }
-
-        ::-webkit-scrollbar-thumb:hover {
-            background: #764ba2;
         }
     </style>
 </head>
@@ -502,7 +499,7 @@
     <div class="container">
         <div class="header">
             <h2><i class="fas fa-fire"></i> Available Deals on Wheels</h2>
-            <p>Discover the best deals from trusted suppliers</p>
+            <p>Live track your suppliers and deals in real-time</p>
         </div>
 
         <!-- Stats Bar -->
@@ -540,7 +537,7 @@
         <!-- Deals Grid -->
         <div class="deals-grid">
             {% for row in data %}
-            <div class="deal-card">
+            <div class="deal-card" id="deal-card-{{ row.id }}">
                 {% if loop.first %}
                 <div class="hot-badge">
                     <i class="fas fa-fire"></i> HOT DEAL
@@ -599,20 +596,33 @@
                         </div>
                     </div>
 
-                    <!-- Live Location Section with Embedded Map -->
+                    <!-- Live Location Section with Live Tracking Map -->
                     {% if row.live_latitude and row.live_longitude %}
                     <div class="map-container">
-                        <iframe 
-                            src="https://www.google.com/maps?q={{ row.live_latitude }},{{ row.live_longitude }}&output=embed"
-                            allowfullscreen>
-                        </iframe>
+                        <div id="live-map-{{ row.id }}" class="live-map"></div>
                     </div>
                     
-                    <a href="https://www.google.com/maps?q={{ row.live_latitude }},{{ row.live_longitude }}" 
-                       target="_blank" 
-                       class="location-link">
-                        <i class="fas fa-external-link-alt"></i> Open in Google Maps
-                    </a>
+                    <div style="margin-top: 10px;">
+                        <a href="https://www.google.com/maps?q={{ row.live_latitude }},{{ row.live_longitude }}" 
+                           target="_blank" 
+                           class="location-link">
+                            <i class="fas fa-external-link-alt"></i> Open in Google Maps
+                        </a>
+                        <button onclick="startLiveTracking({{ row.id }}, {{ row.live_latitude }}, {{ row.live_longitude }})" 
+                                class="tracking-btn" id="tracking-btn-{{ row.id }}">
+                            <i class="fas fa-play"></i> Start Live Tracking
+                        </button>
+                        <button onclick="stopLiveTracking({{ row.id }})" 
+                                class="tracking-btn stop" id="stop-btn-{{ row.id }}" style="display: none;">
+                            <i class="fas fa-stop"></i> Stop Tracking
+                        </button>
+                    </div>
+                    
+                    <div id="tracking-status-{{ row.id }}" style="margin-top: 10px; font-size: 12px;">
+                        <span id="location-time-{{ row.id }}"></span>
+                        <span id="live-badge-{{ row.id }}" class="live-status status-inactive">● Not Tracking</span>
+                    </div>
+                    
                     <span class="coordinates">
                         <i class="fas fa-crosshairs"></i> {{ "%.6f"|format(row.live_latitude) }}, {{ "%.6f"|format(row.live_longitude) }}
                     </span>
@@ -673,6 +683,156 @@
     </div>
 
     <script>
+        // Store all tracking intervals
+        const trackingIntervals = {};
+        const maps = {};
+        const markers = {};
+        const paths = {};
+        const pathCoordinates = {};
+
+        // Initialize a map for a deal
+        function initMap(dealId, lat, lng) {
+            const mapDiv = document.getElementById(`live-map-${dealId}`);
+            if (!mapDiv) return null;
+            
+            // Create map
+            const map = L.map(`live-map-${dealId}`).setView([lat, lng], 15);
+            
+            // Add tile layer (OpenStreetMap)
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(map);
+            
+            // Add marker
+            const marker = L.marker([lat, lng]).addTo(map);
+            marker.bindTooltip('Current Location').openTooltip();
+            
+            // Store map and marker
+            maps[dealId] = map;
+            markers[dealId] = marker;
+            pathCoordinates[dealId] = [[lat, lng]];
+            
+            // Add path line
+            const pathLine = L.polyline(pathCoordinates[dealId], {
+                color: 'red',
+                weight: 3,
+                opacity: 0.7
+            }).addTo(map);
+            paths[dealId] = pathLine;
+            
+            return map;
+        }
+
+        // Start live tracking for a deal
+        function startLiveTracking(dealId, startLat, startLng) {
+            // Initialize map if not already done
+            if (!maps[dealId]) {
+                initMap(dealId, startLat, startLng);
+            }
+            
+            // Stop any existing tracking
+            if (trackingIntervals[dealId]) {
+                clearInterval(trackingIntervals[dealId]);
+            }
+            
+            // Update UI
+            document.getElementById(`tracking-btn-${dealId}`).style.display = 'none';
+            document.getElementById(`stop-btn-${dealId}`).style.display = 'inline-flex';
+            document.getElementById(`live-badge-${dealId}`).className = 'live-status status-active';
+            document.getElementById(`live-badge-${dealId}`).innerHTML = '● Live Tracking Active';
+            
+            // Start fetching location every 3 seconds
+            trackingIntervals[dealId] = setInterval(async () => {
+                try {
+                    const response = await fetch(`/get_deal_location/${dealId}`);
+                    const data = await response.json();
+                    
+                    if (data.latitude && data.longitude) {
+                        const newLat = data.latitude;
+                        const newLng = data.longitude;
+                        
+                        // Update marker position
+                        if (markers[dealId]) {
+                            markers[dealId].setLatLng([newLat, newLng]);
+                        } else {
+                            // Recreate marker if lost
+                            markers[dealId] = L.marker([newLat, newLng]).addTo(maps[dealId]);
+                        }
+                        
+                        // Center map on new location
+                        if (maps[dealId]) {
+                            maps[dealId].setView([newLat, newLng], 15);
+                        }
+                        
+                        // Add to path history
+                        if (pathCoordinates[dealId]) {
+                            pathCoordinates[dealId].push([newLat, newLng]);
+                            // Keep last 100 points for performance
+                            if (pathCoordinates[dealId].length > 100) {
+                                pathCoordinates[dealId].shift();
+                            }
+                            
+                            // Update path line
+                            if (paths[dealId]) {
+                                maps[dealId].removeLayer(paths[dealId]);
+                            }
+                            paths[dealId] = L.polyline(pathCoordinates[dealId], {
+                                color: 'red',
+                                weight: 3,
+                                opacity: 0.7
+                            }).addTo(maps[dealId]);
+                        }
+                        
+                        // Update timestamp display
+                        const timestamp = data.timestamp ? new Date(data.timestamp).toLocaleTimeString() : new Date().toLocaleTimeString();
+                        document.getElementById(`location-time-${dealId}`).innerHTML = `
+                            <i class="fas fa-clock"></i> Last update: ${timestamp}
+                            <br><i class="fas fa-chart-line"></i> Movement tracked: ${pathCoordinates[dealId].length} points
+                        `;
+                        
+                        // Add accuracy info if available
+                        if (data.accuracy) {
+                            let accuracyText = '';
+                            if (data.accuracy < 50) {
+                                accuracyText = '🎯 High accuracy';
+                            } else if (data.accuracy < 200) {
+                                accuracyText = '📍 Medium accuracy';
+                            } else {
+                                accuracyText = '⚠️ Low accuracy';
+                            }
+                            document.getElementById(`location-time-${dealId}`).innerHTML += `<br>${accuracyText} (±${Math.round(data.accuracy)}m)`;
+                        }
+                    }
+                } catch (error) {
+                    console.log(`Error fetching location for deal ${dealId}:`, error);
+                }
+            }, 3000); // Update every 3 seconds
+        }
+
+        // Stop live tracking for a deal
+        function stopLiveTracking(dealId) {
+            if (trackingIntervals[dealId]) {
+                clearInterval(trackingIntervals[dealId]);
+                delete trackingIntervals[dealId];
+            }
+            
+            // Update UI
+            document.getElementById(`tracking-btn-${dealId}`).style.display = 'inline-flex';
+            document.getElementById(`stop-btn-${dealId}`).style.display = 'none';
+            document.getElementById(`live-badge-${dealId}`).className = 'live-status status-inactive';
+            document.getElementById(`live-badge-${dealId}`).innerHTML = '● Tracking Stopped';
+            document.getElementById(`location-time-${dealId}`).innerHTML += '<br><i class="fas fa-stop"></i> Tracking stopped';
+        }
+
+        // Initialize maps for all deals that have location data
+        document.addEventListener('DOMContentLoaded', function() {
+            {% for row in data %}
+                {% if row.live_latitude and row.live_longitude %}
+                    initMap({{ row.id }}, {{ row.live_latitude }}, {{ row.live_longitude }});
+                {% endif %}
+            {% endfor %}
+        });
+
         // Modal functions
         function openModal(src) {
             document.getElementById('modalImage').src = src;
@@ -692,14 +852,13 @@
             }
         });
         
-        // Smooth scroll for anchor links
-        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-            anchor.addEventListener('click', function (e) {
-                e.preventDefault();
-                document.querySelector(this.getAttribute('href')).scrollIntoView({
-                    behavior: 'smooth'
-                });
-            });
+        // Clean up intervals when page unloads
+        window.addEventListener('beforeunload', function() {
+            for (const dealId in trackingIntervals) {
+                if (trackingIntervals[dealId]) {
+                    clearInterval(trackingIntervals[dealId]);
+                }
+            }
         });
     </script>
 </body>
