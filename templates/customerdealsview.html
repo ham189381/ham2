@@ -4,77 +4,134 @@
     <title>available deals on wheels</title>
     <style>
         body{font-family:Arial;background:#f4f4f4;padding:20px;}
-        h2{text-align:center;color:#333;}
+        h2{text-align:center;color:#333;margin-bottom:30px;}
+        .deals-container{max-width:1200px;margin:0 auto;}
         .deal-card{border:1px solid #ddd;border-radius:10px;margin:20px auto;padding:20px;background:white;box-shadow:0 2px 5px rgba(0,0,0,0.1);max-width:600px;}
         .deal-card:hover{box-shadow:0 4px 10px rgba(0,0,0,0.2);}
         .deal-title{color:#4CAF50;margin-bottom:15px;border-bottom:2px solid #4CAF50;padding-bottom:5px;}
         .deal-info{margin:10px 0;line-height:1.6;}
         .deal-info b{color:#555;min-width:100px;display:inline-block;}
         .images{margin-top:15px;text-align:center;}
-        .images img{margin:10px;border-radius:5px;box-shadow:0 1px 3px rgba(0,0,0,0.2);max-width:250px;height:auto;}
+        .images img{margin:10px;border-radius:5px;box-shadow:0 1px 3px rgba(0,0,0,0.2);max-width:250px;height:auto;cursor:pointer;}
+        .images img:hover{transform:scale(1.05);transition:transform 0.3s;}
         .location-link{display:inline-block;margin-top:10px;padding:8px 15px;background:#2196F3;color:white;text-decoration:none;border-radius:5px;font-size:14px;}
         .location-link:hover{background:#0b7dda;}
         .no-location{color:#999;font-style:italic;margin-top:10px;display:inline-block;}
         .phone-number{color:#4CAF50;font-weight:bold;font-size:16px;}
+        .embedded-map{margin:10px 0;border-radius:8px;overflow:hidden;box-shadow:0 2px 4px rgba(0,0,0,0.1);}
+        .embedded-map iframe{display:block;width:100%;height:250px;border:0;}
+        .coordinates{font-size:11px;color:#666;margin-top:5px;display:block;}
+        .modal-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.9);display:flex;justify-content:center;align-items:center;z-index:1000;cursor:pointer;}
+        .modal{background:white;border-radius:10px;max-width:90%;max-height:90%;overflow:auto;cursor:default;}
+        .modal-header{padding:15px 20px;border-bottom:1px solid #ddd;display:flex;justify-content:space-between;align-items:center;}
+        .close-modal{font-size:28px;cursor:pointer;color:#999;}
+        .close-modal:hover{color:#333;}
+        .modal-body{padding:20px;text-align:center;}
+        .modal-body img{max-width:100%;max-height:70vh;border-radius:5px;}
+        @media (max-width: 768px){
+            body{padding:10px;}
+            .deal-card{margin:10px auto;}
+            .deal-info b{min-width:80px;}
+            .images img{max-width:150px;}
+            .embedded-map iframe{height:200px;}
+        }
     </style>
 </head>
 <body>
 
-<h2>AVAILABLE DEALS TO BUY</h2>
+<div class="deals-container">
+    <h2>🔥 AVAILABLE DEALS TO BUY</h2>
 
-{% for row in data %}
-<div class="deal-card">
-    <div class="deal-title">
-        <h3>{{row.materialname|upper}}</h3>
-    </div>
-    
-    <div class="deal-info">
-        <b>Material:</b> {{row.materialname}}<br>
-        <b>Tipper:</b> {{row.tippername}}<br>
-        <b>Location:</b> {{row.location}}<br>
-        <b>Phone:</b> <span class="phone-number">{{row.phone}}</span><br>
-        <b>Supplier:</b> {{row.suppliername}}
-    </div>
-    
-    <!-- Live Location Section -->
-    <div class="deal-info">
-        {% if row.live_latitude and row.live_longitude %}
-            <b>Live Location:</b>
-            <a href="https://www.google.com/maps?q={{ row.live_latitude }},{{ row.live_longitude }}" 
-               target="_blank" 
-               class="location-link">
-                📍 View on Google Maps
-            </a>
-            <br>
-            <small style="color:#666;margin-left:100px;">
-                Coordinates: {{ "%.6f"|format(row.live_latitude) }}, {{ "%.6f"|format(row.live_longitude) }}
-            </small>
-        {% else %}
-            <b>Live Location:</b>
-            <span class="no-location">⚠️ No location captured for this deal</span>
-        {% endif %}
-    </div>
-    
-    <!-- Images Section -->
-    <div class="images">
-        {% if row.imageone %}
-            <img src="{{ row.imageone }}" alt="Deal Image 1" width="250">
-        {% else %}
-            <p>No image available</p>
-        {% endif %}
+    {% for row in data %}
+    <div class="deal-card">
+        <div class="deal-title">
+            <h3>{{ row.materialname|upper }}</h3>
+        </div>
         
-        {% if row.imagetwo %}
-            <img src="{{ row.imagetwo }}" alt="Deal Image 2" width="250">
-        {% else %}
-            <p>No image available</p>
-        {% endif %}
+        <div class="deal-info">
+            <b>Material:</b> {{ row.materialname }}<br>
+            <b>Tipper:</b> {{ row.tippername }}<br>
+            <b>Location:</b> {{ row.location }}<br>
+            <b>Phone:</b> <span class="phone-number">{{ row.phone }}</span><br>
+            <b>Supplier:</b> {{ row.suppliername }}
+        </div>
+        
+        <!-- Live Location Section with Embedded Map -->
+        <div class="deal-info">
+            <b>Live Location:</b>
+            {% if row.live_latitude and row.live_longitude %}
+                <!-- Embedded Google Map -->
+                <div class="embedded-map">
+                    <iframe 
+                        src="https://www.google.com/maps?q={{ row.live_latitude }},{{ row.live_longitude }}&output=embed"
+                        allowfullscreen>
+                    </iframe>
+                </div>
+                
+                <a href="https://www.google.com/maps?q={{ row.live_latitude }},{{ row.live_longitude }}" 
+                   target="_blank" 
+                   class="location-link">
+                    📍 Open in Google Maps (Full Screen)
+                </a>
+                <span class="coordinates">
+                    📌 Coordinates: {{ "%.6f"|format(row.live_latitude) }}, {{ "%.6f"|format(row.live_longitude) }}
+                </span>
+            {% else %}
+                <span class="no-location">⚠️ No location captured for this deal</span>
+            {% endif %}
+        </div>
+        
+        <!-- Images Section -->
+        <div class="images">
+            {% if row.imageone %}
+                <img src="{{ row.imageone }}" alt="Deal Image 1" onclick="openModal(this.src)">
+            {% endif %}
+            
+            {% if row.imagetwo %}
+                <img src="{{ row.imagetwo }}" alt="Deal Image 2" onclick="openModal(this.src)">
+            {% endif %}
+        </div>
+    </div>
+    {% else %}
+    <div style="text-align:center;padding:50px;background:white;border-radius:10px;">
+        <p>No deals available at the moment. Please check back later.</p>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Image Modal for enlarging images -->
+<div id="imageModal" class="modal-overlay" style="display: none;" onclick="closeModal()">
+    <div class="modal" onclick="event.stopPropagation()">
+        <div class="modal-header">
+            <h3>Deal Image</h3>
+            <span class="close-modal" onclick="closeModal()">&times;</span>
+        </div>
+        <div class="modal-body">
+            <img id="modalImage" src="" alt="Enlarged view">
+        </div>
     </div>
 </div>
-{% else %}
-<div style="text-align:center;padding:50px;background:white;border-radius:10px;">
-    <p>No deals available at the moment. Please check back later.</p>
-</div>
-{% endfor %}
+
+<script>
+    // Modal functions for image enlargement
+    function openModal(src) {
+        document.getElementById('modalImage').src = src;
+        document.getElementById('imageModal').style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+    }
+    
+    function closeModal() {
+        document.getElementById('imageModal').style.display = 'none';
+        document.body.style.overflow = 'auto';
+    }
+    
+    // Close modal with Escape key
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'Escape') {
+            closeModal();
+        }
+    });
+</script>
 
 </body>
 </html>
