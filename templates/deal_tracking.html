@@ -1,56 +1,397 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Live Deal Tracking</title>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
-        #map { height: 600px; width: 100%; }
-        .info { padding: 10px; background: white; margin: 10px; border-radius: 5px; }
-    </style>
-</head>
-<body>
-    <div id="map"></div>
-    <div class="info" id="deal-info">Loading deal information...</div>
-    
-    <script>
-        const dealId = {{ deal_id }};
-        let map;
-        let marker;
-        let trackInterval;
-        
-        function initMap() {
-            map = L.map('map').setView([0.3136, 32.5811], 13);
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
         }
         
-        async function updateLocation() {
-            try {
-                const response = await fetch(`/get_deal_location/${dealId}`);
-                const data = await response.json();
-                
-                if (!data.error) {
-                    if (!marker) {
-                        marker = L.marker([data.latitude, data.longitude]).addTo(map);
-                        map.setView([data.latitude, data.longitude], 15);
-                    } else {
-                        marker.setLatLng([data.latitude, data.longitude]);
-                    }
-                    
-                    document.getElementById('deal-info').innerHTML = `
-                        <strong>Last Update:</strong> ${new Date(data.timestamp).toLocaleString()}<br>
-                        <strong>Location:</strong> ${data.latitude.toFixed(6)}, ${data.longitude.toFixed(6)}<br>
-                        <strong>Accuracy:</strong> ${data.accuracy ? data.accuracy.toFixed(0) + 'm' : 'N/A'}
-                    `;
-                }
-            } catch (error) {
-                console.error('Error updating location:', error);
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .header h1 {
+            color: white;
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            color: rgba(255,255,255,0.9);
+        }
+        
+        .deal-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .info-item {
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        
+        .info-label {
+            font-weight: bold;
+            color: #667eea;
+            font-size: 12px;
+            text-transform: uppercase;
+        }
+        
+        .info-value {
+            font-size: 16px;
+            margin-top: 5px;
+            color: #333;
+        }
+        
+        .location-box {
+            background: #f0f0f0;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            margin: 20px 0;
+        }
+        
+        .coordinates {
+            font-family: monospace;
+            font-size: 18px;
+            font-weight: bold;
+            color: #333;
+            margin: 10px 0;
+        }
+        
+        .status {
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        
+        .status-live {
+            background: #4caf50;
+            color: white;
+            animation: pulse 1.5s infinite;
+        }
+        
+        .status-waiting {
+            background: #ff9800;
+            color: white;
+        }
+        
+        @keyframes pulse {
+            0% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.6;
+            }
+            100% {
+                opacity: 1;
             }
         }
         
-        initMap();
-        updateLocation();
-        trackInterval = setInterval(updateLocation, 5000);
+        .map-placeholder {
+            background: #e0e0e0;
+            height: 400px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .map-link {
+            background: #2196f3;
+            color: white;
+            padding: 12px 24px;
+            text-decoration: none;
+            border-radius: 8px;
+            margin-top: 15px;
+            display: inline-block;
+        }
+        
+        .history-list {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        .history-item {
+            padding: 10px;
+            border-bottom: 1px solid #e0e0e0;
+            font-size: 12px;
+        }
+        
+        .history-time {
+            color: #667eea;
+            font-weight: bold;
+        }
+        
+        .refresh-indicator {
+            text-align: center;
+            color: #999;
+            font-size: 12px;
+            margin-top: 10px;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            text-decoration: none;
+            display: inline-block;
+            text-align: center;
+        }
+        
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+        
+        .btn-secondary {
+            background: #ff9800;
+            color: white;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 20px;
+        }
+        
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        @media (max-width: 768px) {
+            .coordinates {
+                font-size: 14px;
+            }
+            .deal-info {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📍 Live Deal Tracking</h1>
+            <p>Real-time location updates for your deal</p>
+        </div>
+        
+        <div class="card" id="deal-card">
+            <div class="loading">
+                <div class="spinner"></div>
+                <p>Loading deal information...</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const dealId = {{ deal_id }};
+        let updateInterval;
+        
+        async function loadDealInfo() {
+            try {
+                // Fetch deal details
+                const response = await fetch(`/api/deal_locations`);
+                const deals = await response.json();
+                const deal = deals.find(d => d.id === dealId);
+                
+                if (!deal) {
+                    showError();
+                    return;
+                }
+                
+                // Fetch latest location
+                const locationResponse = await fetch(`/get_deal_location/${dealId}`);
+                const location = await locationResponse.json();
+                
+                // Fetch history
+                const historyResponse = await fetch(`/get_deal_tracking_history/${dealId}`);
+                const history = await historyResponse.json();
+                
+                renderDealInfo(deal, location, history);
+            } catch (error) {
+                console.error('Error loading deal:', error);
+                showError();
+            }
+        }
+        
+        function renderDealInfo(deal, location, history) {
+            const hasLocation = location && !location.error;
+            const currentLat = hasLocation ? location.latitude : (deal.live_latitude || deal.last_latitude);
+            const currentLng = hasLocation ? location.longitude : (deal.live_longitude || deal.last_longitude);
+            const lastUpdate = hasLocation ? new Date(location.timestamp) : 
+                              (deal.last_update ? new Date(deal.last_update) : null);
+            
+            const html = `
+                <h2 style="margin-bottom: 20px; color: #333;">📦 ${deal.suppliername}</h2>
+                
+                <div class="deal-info">
+                    <div class="info-item">
+                        <div class="info-label">Material</div>
+                        <div class="info-value">${deal.materialname || 'N/A'}</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Tipper Name</div>
+                        <div class="info-value">${deal.tippername || 'N/A'}</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Phone Number</div>
+                        <div class="info-value">${deal.phone || 'N/A'}</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Location Description</div>
+                        <div class="info-value">${deal.location || 'N/A'}</div>
+                    </div>
+                </div>
+                
+                <div class="location-box">
+                    <div class="info-label">LIVE LOCATION STATUS</div>
+                    <div style="margin: 15px 0;">
+                        <span class="status ${hasLocation ? 'status-live' : 'status-waiting'}">
+                            ${hasLocation ? '🟢 LIVE TRACKING ACTIVE' : '🟠 WAITING FOR LOCATION'}
+                        </span>
+                    </div>
+                    
+                    ${hasLocation ? `
+                        <div class="coordinates">
+                            📍 Latitude: ${currentLat.toFixed(6)}<br>
+                            📍 Longitude: ${currentLng.toFixed(6)}
+                        </div>
+                        <div style="font-size: 12px; color: #666;">
+                            Accuracy: ${location.accuracy ? location.accuracy.toFixed(0) + ' meters' : 'N/A'}<br>
+                            Last update: ${lastUpdate ? lastUpdate.toLocaleString() : 'Never'}
+                        </div>
+                        <div class="button-group">
+                            <a href="https://www.google.com/maps?q=${currentLat},${currentLng}" 
+                               target="_blank" class="btn btn-primary">
+                                🗺️ Open in Google Maps
+                            </a>
+                            <a href="https://www.openstreetmap.org/?mlat=${currentLat}&mlon=${currentLng}#map=15/${currentLat}/${currentLng}" 
+                               target="_blank" class="btn btn-secondary">
+                                📍 Open in OpenStreetMap
+                            </a>
+                        </div>
+                    ` : `
+                        <div class="coordinates">
+                            ⏳ No location data received yet
+                        </div>
+                        <div style="font-size: 12px; color: #666; margin-top: 10px;">
+                            The deal provider hasn't shared their location yet.<br>
+                            Location will appear here once available.
+                        </div>
+                    `}
+                </div>
+                
+                ${history && history.length > 0 ? `
+                    <div style="margin-top: 20px;">
+                        <h3>📍 Location History (Last ${Math.min(history.length, 10)} updates)</h3>
+                        <div class="history-list">
+                            ${history.slice(-10).reverse().map(h => `
+                                <div class="history-item">
+                                    <div class="history-time">${new Date(h.timestamp).toLocaleString()}</div>
+                                    <div>Lat: ${h.latitude.toFixed(6)}, Lng: ${h.longitude.toFixed(6)}</div>
+                                    ${h.accuracy ? `<div>Accuracy: ${h.accuracy.toFixed(0)}m</div>` : ''}
+                                </div>
+                            `).join('')}
+                        </div>
+                        ${history.length > 10 ? `<div class="refresh-indicator">Showing last 10 of ${history.length} updates</div>` : ''}
+                    </div>
+                ` : `
+                    <div style="margin-top: 20px; text-align: center; padding: 20px; background: #f8f9fa; border-radius: 8px;">
+                        <p>No location history available yet</p>
+                    </div>
+                `}
+                
+                <div class="refresh-indicator" id="refresh-indicator">
+                    Auto-refreshing every 10 seconds...
+                </div>
+            `;
+            
+            document.getElementById('deal-card').innerHTML = html;
+        }
+        
+        function showError() {
+            document.getElementById('deal-card').innerHTML = `
+                <div style="text-align: center; padding: 40px;">
+                    <h3>❌ Deal not found</h3>
+                    <p>The deal you're looking for doesn't exist or has been removed.</p>
+                    <a href="/dealstoadmin" class="btn btn-primary" style="margin-top: 20px;">Back to Deals</a>
+                </div>
+            `;
+        }
+        
+        function startAutoRefresh() {
+            // Update every 10 seconds
+            updateInterval = setInterval(() => {
+                loadDealInfo();
+                // Update refresh indicator
+                const indicator = document.getElementById('refresh-indicator');
+                if (indicator) {
+                    indicator.innerHTML = `Auto-refreshing every 10 seconds... Last update: ${new Date().toLocaleTimeString()}`;
+                }
+            }, 10000);
+        }
+        
+        // Load initial data and start refresh
+        loadDealInfo();
+        startAutoRefresh();
+        
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', () => {
+            if (updateInterval) clearInterval(updateInterval);
+        });
     </script>
 </body>
 </html>
