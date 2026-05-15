@@ -3,16 +3,49 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Available Deals on Wheels</title>
+    <title>Available Deals on Wheels - Admin View</title>
     <!-- Link to the CSS file (adjust path if needed) -->
     <link rel="stylesheet" href="{{ url_for('static', filename='dealstoadminstyle.css') }}">
     <!-- Font Awesome for icons (optional but recommended) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .location-link {
+            display: inline-block;
+            margin-top: 5px;
+            padding: 5px 10px;
+            background: #2196F3;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            font-size: 12px;
+        }
+        .location-link:hover {
+            background: #0b7dda;
+        }
+        .no-location {
+            color: #999;
+            font-style: italic;
+            font-size: 12px;
+        }
+        .coordinates {
+            font-size: 11px;
+            color: #666;
+            margin-top: 5px;
+            display: block;
+        }
+        .deal-image {
+            cursor: pointer;
+            transition: transform 0.3s;
+        }
+        .deal-image:hover {
+            transform: scale(1.05);
+        }
+    </style>
 </head>
 <body>
 
-
     <div class="container">
-        <h2 class="text-center mb-4">🔥 Available Deals on Wheels</h2>
+        <h2 class="text-center mb-4">🔥 Available Deals on Wheels - Admin View</h2>
 
         <div class="row">
             {% for row in data %}
@@ -32,25 +65,45 @@
                         <p><i class="fas fa-truck"></i> <strong>Tipper:</strong> {{ row.tippername }}</p>
                         <p><i class="fas fa-map-marker-alt"></i> <strong>Location:</strong> {{ row.location }}</p>
                         
+                        <!-- Live Location Section -->
+                        <p>
+                            <i class="fas fa-location-dot"></i> <strong>Live Location:</strong>
+                            {% if row.live_latitude and row.live_longitude %}
+                                <br>
+                                <a href="https://www.google.com/maps?q={{ row.live_latitude }},{{ row.live_longitude }}" 
+                                   target="_blank" 
+                                   class="location-link">
+                                    <i class="fas fa-map-marked-alt"></i> View on Google Maps
+                                </a>
+                                <span class="coordinates">
+                                    📍 Lat: {{ "%.6f"|format(row.live_latitude) }}, Lng: {{ "%.6f"|format(row.live_longitude) }}
+                                </span>
+                            {% else %}
+                                <span class="no-location">⚠️ No location captured</span>
+                            {% endif %}
+                        </p>
+
                         <!-- Phone number with click-to-call -->
                         <p>
                             <i class="fas fa-phone-alt"></i> <strong>Phone:</strong> 
-                            <a href="tel:+256703446623" class="phone-link">{{ row.phone }}</a>
+                            <a href="tel:{{ row.phone }}" class="phone-link">{{ row.phone }}</a>
                         </p>
 
                         <!-- Image gallery -->
                         <div class="image-gallery">
                             {% if row.imageone %}
-                            <img src="{{ url_for('static', filename= row.imageone) }}" 
+                            <img src="{{ row.imageone }}" 
                                  alt="Deal image 1" 
                                  class="deal-image"
+                                 style="max-width: 200px; margin: 5px; border-radius: 5px;"
                                  onclick="openModal(this.src)">
                             {% endif %}
                             
                             {% if row.imagetwo %}
-                            <img src="{{ url_for('static', filename= row.imagetwo) }}" 
+                            <img src="{{ row.imagetwo }}" 
                                  alt="Deal image 2" 
                                  class="deal-image"
+                                 style="max-width: 200px; margin: 5px; border-radius: 5px;"
                                  onclick="openModal(this.src)">
                             {% endif %}
                         </div>
@@ -58,10 +111,16 @@
 
                     <div class="card-footer flex-between">
                         <span class="price-tag">Call for price</span>
-                        <a href="tel:+256703446623" class="btn btn-primary btn-small">
+                        <a href="tel:{{ row.phone }}" class="btn btn-primary btn-small">
                             <i class="fas fa-phone-alt"></i> Call Now
                         </a>
                     </div>
+                </div>
+            </div>
+            {% else %}
+            <div class="col">
+                <div class="card" style="text-align: center; padding: 50px;">
+                    <p>No deals available at the moment.</p>
                 </div>
             </div>
             {% endfor %}
@@ -92,6 +151,13 @@
         function closeModal() {
             document.getElementById('imageModal').style.display = 'none';
         }
+        
+        // Close modal with Escape key
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape') {
+                closeModal();
+            }
+        });
     </script>
 </body>
 </html>
