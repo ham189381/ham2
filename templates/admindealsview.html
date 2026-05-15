@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin - Deals with Live Location</title>
+    <title>Admin - Deals Management</title>
     <style>
         * {
             margin: 0;
@@ -25,159 +25,370 @@
         h1 {
             color: #333;
             margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
         
         .stats {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
-            padding: 15px;
+            padding: 15px 20px;
             border-radius: 10px;
             margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
         }
         
-        table {
-            width: 100%;
-            background: white;
-            border-radius: 10px;
-            overflow: hidden;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
-        
-        th {
-            background: #667eea;
-            color: white;
-            padding: 12px;
-            text-align: left;
-        }
-        
-        td {
-            padding: 12px;
-            border-bottom: 1px solid #e0e0e0;
-        }
-        
-        tr:hover {
-            background: #f9f9f9;
-        }
-        
-        .live-badge {
-            background: #4caf50;
-            color: white;
-            padding: 3px 8px;
-            border-radius: 3px;
-            font-size: 11px;
-            font-weight: bold;
-        }
-        
-        .no-location {
-            background: #ff9800;
-            color: white;
-            padding: 3px 8px;
-            border-radius: 3px;
-            font-size: 11px;
-        }
-        
-        .track-btn {
-            background: #2196f3;
-            color: white;
-            padding: 5px 10px;
-            text-decoration: none;
-            border-radius: 5px;
-            font-size: 12px;
-        }
-        
-        .track-btn:hover {
-            background: #1976d2;
+        .stats p {
+            margin: 5px 0;
         }
         
         .refresh-btn {
-            background: #4caf50;
-            color: white;
+            background: white;
+            color: #667eea;
             border: none;
-            padding: 10px 20px;
+            padding: 8px 16px;
             border-radius: 5px;
             cursor: pointer;
-            margin-bottom: 20px;
+            font-weight: bold;
+        }
+        
+        .deals-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+            gap: 20px;
+        }
+        
+        .deal-card {
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .deal-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 20px rgba(0,0,0,0.15);
+        }
+        
+        .card-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px;
+        }
+        
+        .card-header h3 {
+            font-size: 18px;
+            margin-bottom: 5px;
+        }
+        
+        .card-header p {
+            font-size: 12px;
+            opacity: 0.9;
+        }
+        
+        .card-body {
+            padding: 15px;
+        }
+        
+        .info-row {
+            display: flex;
+            margin-bottom: 10px;
             font-size: 14px;
         }
         
-        .refresh-btn:hover {
-            background: #45a049;
+        .info-label {
+            font-weight: bold;
+            width: 100px;
+            color: #667eea;
         }
         
-        .location-cell {
+        .info-value {
+            flex: 1;
+            color: #333;
+        }
+        
+        .images-section {
+            margin: 15px 0;
+        }
+        
+        .images-title {
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #333;
+            font-size: 14px;
+        }
+        
+        .images-container {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        
+        .deal-image {
+            width: 100px;
+            height: 100px;
+            object-fit: cover;
+            border-radius: 8px;
+            cursor: pointer;
+            border: 2px solid #e0e0e0;
+            transition: border-color 0.2s;
+        }
+        
+        .deal-image:hover {
+            border-color: #667eea;
+        }
+        
+        .location-section {
+            background: #f8f9fa;
+            padding: 12px;
+            border-radius: 8px;
+            margin-top: 15px;
+        }
+        
+        .location-title {
+            font-weight: bold;
+            margin-bottom: 8px;
+            color: #333;
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .map-image {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            border-radius: 8px;
+            margin-top: 8px;
+            border: 1px solid #ddd;
+        }
+        
+        .coordinates {
             font-family: monospace;
+            font-size: 11px;
+            color: #666;
+            margin-top: 8px;
+            word-break: break-all;
+        }
+        
+        .no-location {
+            color: #999;
+            font-style: italic;
             font-size: 12px;
+            text-align: center;
+            padding: 20px;
+        }
+        
+        .card-footer {
+            padding: 12px 15px;
+            background: #f8f9fa;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 11px;
+            color: #666;
+        }
+        
+        .track-link {
+            background: #2196f3;
+            color: white;
+            padding: 5px 12px;
+            text-decoration: none;
+            border-radius: 5px;
+            font-size: 12px;
+            transition: background 0.2s;
+        }
+        
+        .track-link:hover {
+            background: #1976d2;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.9);
+            cursor: pointer;
+        }
+        
+        .modal-content {
+            margin: auto;
+            display: block;
+            max-width: 90%;
+            max-height: 90%;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+        
+        .close-modal {
+            position: absolute;
+            top: 20px;
+            right: 35px;
+            color: #f1f1f1;
+            font-size: 40px;
+            font-weight: bold;
+            cursor: pointer;
         }
         
         @media (max-width: 768px) {
-            table {
-                font-size: 12px;
+            .deals-grid {
+                grid-template-columns: 1fr;
             }
-            th, td {
-                padding: 8px;
+            .info-row {
+                flex-direction: column;
+            }
+            .info-label {
+                width: auto;
+                margin-bottom: 5px;
             }
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>📦 Deals with Live Location Tracking</h1>
+        <h1>
+            📦 Deals Management
+            <span style="font-size: 14px; background: #667eea; color: white; padding: 4px 8px; border-radius: 5px;">
+                Admin View
+            </span>
+        </h1>
         
         <div class="stats">
-            <strong>Total Active Deals: {{ data|length }}</strong> | 
-            Last updated: <span id="last-update">Just now</span>
+            <div>
+                <p><strong>Total Deals:</strong> {{ data|length }}</p>
+                <p><strong>Last Updated:</strong> <span id="last-update">Just now</span></p>
+            </div>
+            <button class="refresh-btn" onclick="location.reload()">🔄 Refresh</button>
         </div>
         
-        <button class="refresh-btn" onclick="refreshTable()">🔄 Refresh Locations</button>
+        <div class="deals-grid">
+            {% for deal in data %}
+            <div class="deal-card">
+                <div class="card-header">
+                    <h3>{{ deal.suppliername }}</h3>
+                    <p>Deal ID: {{ deal.id }} | Created: {{ deal.created_at.split('.')[0] if deal.created_at else 'N/A' }}</p>
+                </div>
+                
+                <div class="card-body">
+                    <div class="info-row">
+                        <div class="info-label">Material:</div>
+                        <div class="info-value">{{ deal.materialname or 'N/A' }}</div>
+                    </div>
+                    <div class="info-row">
+                        <div class="info-label">Tipper:</div>
+                        <div class="info-value">{{ deal.tippername or 'N/A' }}</div>
+                    </div>
+                    <div class="info-row">
+                        <div class="info-label">Phone:</div>
+                        <div class="info-value">{{ deal.phone or 'N/A' }}</div>
+                    </div>
+                    <div class="info-row">
+                        <div class="info-label">Location:</div>
+                        <div class="info-value">{{ deal.location or 'N/A' }}</div>
+                    </div>
+                    
+                    {% if deal.imageone or deal.imagetwo %}
+                    <div class="images-section">
+                        <div class="images-title">📷 Product Images</div>
+                        <div class="images-container">
+                            {% if deal.imageone %}
+                            <img src="{{ deal.imageone }}" class="deal-image" onclick="showImage('{{ deal.imageone }}')" alt="Product Image 1">
+                            {% endif %}
+                            {% if deal.imagetwo %}
+                            <img src="{{ deal.imagetwo }}" class="deal-image" onclick="showImage('{{ deal.imagetwo }}')" alt="Product Image 2">
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    <div class="location-section">
+                        <div class="location-title">
+                            📍 Location Information
+                        </div>
+                        {% if deal.live_latitude and deal.live_longitude %}
+                            <div class="coordinates">
+                                <strong>GPS Coordinates:</strong><br>
+                                Latitude: {{ deal.live_latitude|round(6) }}<br>
+                                Longitude: {{ deal.live_longitude|round(6) }}
+                            </div>
+                            <img class="map-image" 
+                                 src="https://maps.googleapis.com/maps/api/staticmap?center={{ deal.live_latitude }},{{ deal.live_longitude }}&zoom=14&size=600x200&markers=color:red%7C{{ deal.live_latitude }},{{ deal.live_longitude }}&key=YOUR_GOOGLE_MAPS_API_KEY"
+                                 alt="Location Map"
+                                 onerror="this.src='https://www.openstreetmap.org/export/embed.html?bbox={{ deal.live_longitude-0.01 }},{{ deal.live_latitude-0.01 }},{{ deal.live_longitude+0.01 }},{{ deal.live_latitude+0.01 }}&layer=mapnik&marker={{ deal.live_latitude }},{{ deal.live_longitude }}'"
+                            >
+                            <div class="coordinates" style="margin-top: 5px;">
+                                <a href="https://www.google.com/maps?q={{ deal.live_latitude }},{{ deal.live_longitude }}" target="_blank" style="color: #2196f3; text-decoration: none;">
+                                    🗺️ Open in Google Maps
+                                </a>
+                            </div>
+                        {% else %}
+                            <div class="no-location">
+                                📍 No location coordinates available for this deal
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="card-footer">
+                    <span>ID: #{{ deal.id }}</span>
+                    <a href="/track_deal/{{ deal.id }}" class="track-link" target="_blank">📍 Track Live</a>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
         
-        <table id="deals-table">
-            <thead>
-                <tr>
-                    <th>ID</th>
-                    <th>Supplier</th>
-                    <th>Material</th>
-                    <th>Tipper</th>
-                    <th>Phone</th>
-                    <th>Live Location</th>
-                    <th>Last Update</th>
-                    <th>Action</th>
-                </tr>
-            </thead>
-            <tbody id="table-body">
-                {% for deal in data %}
-                <tr id="deal-{{ deal.id }}">
-                    <td>{{ deal.id }}</td>
-                    <td>{{ deal.suppliername }}</td>
-                    <td>{{ deal.materialname }}</td>
-                    <td>{{ deal.tippername }}</td>
-                    <td>{{ deal.phone }}</td>
-                    <td class="location-cell" id="location-{{ deal.id }}">
-                        {% if deal.live_latitude or deal.last_latitude %}
-                            <span class="live-badge">LIVE</span><br>
-                            Lat: {{ (deal.live_latitude or deal.last_latitude)|round(6) }}<br>
-                            Lng: {{ (deal.live_longitude or deal.last_longitude)|round(6) }}
-                        {% else %}
-                            <span class="no-location">No location yet</span>
-                        {% endif %}
-                    </td>
-                    <td id="time-{{ deal.id }}">
-                        {% if deal.last_update %}
-                            {{ deal.last_update.split('.')[0] }}
-                        {% else %}
-                            Never
-                        {% endif %}
-                    </td>
-                    <td>
-                        <a href="/track_deal/{{ deal.id }}" class="track-btn" target="_blank">Track Live</a>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+        {% if data|length == 0 %}
+        <div style="text-align: center; padding: 60px; background: white; border-radius: 12px;">
+            <p style="color: #999;">No deals found. Deals will appear here once registered.</p>
+        </div>
+        {% endif %}
     </div>
-
+    
+    <!-- Image Modal -->
+    <div id="imageModal" class="modal" onclick="closeModal()">
+        <span class="close-modal">&times;</span>
+        <img class="modal-content" id="modalImage">
+    </div>
+    
     <script>
-        // Auto-refresh every 10 seconds
-        let refreshInterval;
+        // Image modal functions
+        function showImage(imageUrl) {
+            const modal = document.getElementById('imageModal');
+            const modalImg = document.getElementById('modalImage');
+            modal.style.display = 'block';
+            modalImg.src = imageUrl;
+        }
         
-        async function refreshTable
+        function closeModal() {
+            document.getElementById('imageModal').style.display = 'none';
+        }
+        
+        // Close modal with Escape key
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeModal();
+            }
+        });
+        
+        // Update the last update time
+        document.getElementById('last-update').innerHTML = new Date().toLocaleTimeString();
+        
+        // Optional: Auto-refresh every 30 seconds (commented out to avoid performance issues)
+        // setInterval(() => {
+        //     location.reload();
+        // }, 30000);
+    </script>
+</body>
+</html>
