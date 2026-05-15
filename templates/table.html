@@ -2,38 +2,85 @@
 <html>
 <head>
     <title>Deals Table</title>
+    <style>
+        body{font-family:Arial;background:#f4f4f4;padding:20px;}
+        table{border-collapse:collapse;width:100%;background:white;}
+        th,td{border:1px solid #ddd;padding:10px;text-align:left;}
+        th{background:#4CAF50;color:white;}
+        tr:nth-child(even){background:#f9f9f9;}
+        .map-link{color:#2196F3;text-decoration:none;}
+        .map-link:hover{text-decoration:underline;}
+        img{max-width:50px;max-height:50px;border-radius:5px;}
+        .location-coords{font-size:12px;color:#666;}
+    </style>
 </head>
 <body>
 
-<h2>All Deals (with image file names)</h2>
+<h2>All Deals (with Live Location)</h2>
 
 <table border="1" cellpadding="10">
-<tr>
-    <th>Supplier</th>
-    <th>Material</th>
-    <th>Tipper</th>
-    <th>Location</th>
-    <th>Phone</th>
-    <th>Image1</th>
-    <th>Image2</th>
-</tr>
-
-{% for row in data %}
-<tr>
-    <td>{{row.suppliername}}</td>
-    <td>{{row.materialname}}</td>
-    <td>{{row.tippername}}</td>
-    <td>{{row.location}}</td>
-    <td>{{row.phone}}</td>
-    <td>{{row.imageone}}</td>
-    <td>{{row.imagetwo}}</td>
-</tr>
-{% endfor %}
-
+    <thead>
+        <tr>
+            <th>Supplier</th>
+            <th>Material</th>
+            <th>Tipper</th>
+            <th>Location</th>
+            <th>Phone</th>
+            <th>Live Location (Map)</th>
+            <th>Image1</th>
+            <th>Image2</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for row in data %}
+        <tr>
+            <td>{{row.suppliername}}</td>
+            <td>{{row.materialname}}</td>
+            <td>{{row.tippername}}</td>
+            <td>{{row.location}}</td>
+            <td>{{row.phone}}</td>
+            <td>
+                {% if row.live_latitude and row.live_longitude %}
+                    <a href="https://www.google.com/maps?q={{ row.live_latitude }},{{ row.live_longitude }}" 
+                       target="_blank" 
+                       class="map-link">
+                        📍 View on Google Maps
+                    </a>
+                    <br>
+                    <span class="location-coords">
+                        Lat: {{ "%.6f"|format(row.live_latitude) }}<br>
+                        Lng: {{ "%.6f"|format(row.live_longitude) }}
+                    </span>
+                {% else %}
+                    <span style="color:#999;">⚠️ No location captured</span>
+                {% endif %}
+            </td>
+            <td>
+                {% if row.imageone %}
+                    <a href="{{ row.imageone }}" target="_blank">
+                        <img src="{{ row.imageone }}" alt="Image 1" style="max-width:50px;max-height:50px;">
+                    </a>
+                {% else %}
+                    No image
+                {% endif %}
+            </td>
+            <td>
+                {% if row.imagetwo %}
+                    <a href="{{ row.imagetwo }}" target="_blank">
+                        <img src="{{ row.imagetwo }}" alt="Image 2" style="max-width:50px;max-height:50px;">
+                    </a>
+                {% else %}
+                    No image
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
 </table>
 
 <br>
 <a href="/images">View Real Images</a>
+<a href="/dealspage" style="margin-left:10px;">Back to Deals Page</a>
 
 </body>
 </html>
