@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Deals Form</title>
+    <title>Deals Form - Live Location Tracking</title>
     <style>
         body{font-family:Arial;background:#f4f4f4;}
         form{background:white;padding:20px;width:400px;margin:auto;margin-top:40px;border-radius:10px;box-shadow:0 2px 10px rgba(0,0,0,0.1);}
@@ -12,9 +12,11 @@
         .location-updating{background:#e3f2fd;color:#1976d2;}
         .location-success{background:#d4edda;color:#155724;}
         .location-error{background:#f8d7da;color:#721c24;}
+        .location-sending{background:#fff3cd;color:#856404;}
         .refresh-location{background:#2196F3;margin-top:5px;margin-bottom:15px;}
         .refresh-location:hover{background:#0b7dda;}
         .accuracy-badge{font-size:11px;color:#666;margin-top:5px;display:block;text-align:center;}
+        .tracking-info{background:#e8f4f8;padding:10px;border-radius:5px;margin:10px 0;font-size:12px;}
         h2{text-align:center;color:#333;margin-bottom:20px;}
         label{font-weight:bold;color:#555;margin-top:10px;display:block;}
     </style>
@@ -33,12 +35,18 @@
     <!-- Hidden fields for live location -->
     <input type="hidden" id="live_latitude" name="live_latitude">
     <input type="hidden" id="live_longitude" name="live_longitude">
+    <input type="hidden" id="deal_id" name="deal_id" value="">
     
     <!-- Real-time location display -->
     <div id="location_status" class="location-status location-updating">
         📍 Tracking your location...
     </div>
     <div id="accuracy_info" class="accuracy-badge"></div>
+    
+    <div class="tracking-info">
+        <strong>📍 Live Tracking Active</strong><br>
+        Your location is being shared in real-time. The admin can see your movement on a live map.
+    </div>
     
     <button type="button" onclick="refreshLocation()" class="refresh-location">
         ↻ Update Location Now
@@ -57,18 +65,18 @@
 let watchId = null;
 let currentLat = null;
 let currentLng = null;
-let lastUpdateTime = null;
+let currentDealId = null;
+let locationUpdateInterval = null;
 
-function startTrackingLocation() {
+function startContinuousTracking() {
     if (navigator.geolocation) {
-        // Watch position with balanced settings
+        // Watch position continuously
         watchId = navigator.geolocation.watchPosition(
             function(position) {
-                // Update location
                 currentLat = position.coords.latitude;
                 currentLng = position.coords.longitude;
-                const accuracy = position.coords.accuracy; // in meters
-                lastUpdateTime = new Date();
+                const accuracy = position.coords.accuracy;
+                const timestamp = new Date();
                 
                 // Update hidden fields
                 document.getElementById('live_latitude').value = currentLat;
@@ -81,142 +89,153 @@ function startTrackingLocation() {
                 } else if (accuracy < 200) {
                     accuracyText = '📍 Medium accuracy (±' + Math.round(accuracy) + 'm)';
                 } else {
-                    accuracyText = '⚠️ Low accuracy (±' + Math.round(accuracy) + 'm) - Consider refreshing or moving to open area';
+                    accuracyText = '⚠️ Low accuracy (±' + Math.round(accuracy) + 'm)';
                 }
                 document.getElementById('accuracy_info').innerHTML = accuracyText;
                 
-                // Update display with time
+                // Update display
                 document.getElementById('location_status').innerHTML = 
                     '✅ Live Location: ' + currentLat.toFixed(6) + ', ' + currentLng.toFixed(6) + 
-                    '<br><small>🕐 Updated: ' + lastUpdateTime.toLocaleTimeString() + '</small>';
+                    '<br><small>🕐 Updated: ' + timestamp.toLocaleTimeString() + '</small>';
                 document.getElementById('location_status').className = 'location-status location-success';
+                
+                // Send location to server if deal already saved
+                if (currentDealId) {
+                    sendLocationToServer(currentDealId, currentLat, currentLng, accuracy);
+                }
             },
             function(error) {
                 let errorMsg = '';
                 switch(error.code) {
                     case error.PERMISSION_DENIED:
-                        errorMsg = 'Location access denied. Please enable location services to capture your deal location.';
+                        errorMsg = 'Location access denied. Please enable location services.';
                         break;
                     case error.POSITION_UNAVAILABLE:
-                        errorMsg = 'Location information unavailable. Please check your GPS or WiFi.';
+                        errorMsg = 'Location information unavailable.';
                         break;
                     case error.TIMEOUT:
-                        errorMsg = 'Location request timed out. Please try refreshing.';
+                        errorMsg = 'Location request timed out.';
                         break;
-                    default:
-                        errorMsg = 'Unknown error getting location.';
                 }
                 document.getElementById('location_status').innerHTML = 
-                    '❌ ' + errorMsg + '<br><small>You can still submit the form without location</small>';
-                document.getElementById('location_status').className = 'location-status location-error';
-                document.getElementById('accuracy_info').innerHTML = '';
-            },
-            {
-                enableHighAccuracy: true,   // Use GPS when available
-                maximumAge: 10000,          // Accept location up to 10 seconds old
-                timeout: 15000              // Timeout after 15 seconds
-            }
-        );
-    } else {
-        document.getElementById('location_status').innerHTML = 
-            '❌ Geolocation is not supported by your browser. Please use a modern browser.';
-        document.getElementById('location_status').className = 'location-status location-error';
-    }
-}
-
-function refreshLocation() {
-    document.getElementById('location_status').innerHTML = '🔄 Refreshing location...';
-    document.getElementById('location_status').className = 'location-status location-updating';
-    document.getElementById('accuracy_info').innerHTML = '';
-    
-    if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(
-            function(position) {
-                currentLat = position.coords.latitude;
-                currentLng = position.coords.longitude;
-                const accuracy = position.coords.accuracy;
-                lastUpdateTime = new Date();
-                
-                document.getElementById('live_latitude').value = currentLat;
-                document.getElementById('live_longitude').value = currentLng;
-                
-                let accuracyText = '';
-                if (accuracy < 50) {
-                    accuracyText = '🎯 High accuracy (±' + Math.round(accuracy) + 'm)';
-                } else if (accuracy < 200) {
-                    accuracyText = '📍 Medium accuracy (±' + Math.round(accuracy) + 'm)';
-                } else {
-                    accuracyText = '⚠️ Low accuracy (±' + Math.round(accuracy) + 'm)';
-                }
-                document.getElementById('accuracy_info').innerHTML = accuracyText;
-                
-                document.getElementById('location_status').innerHTML = 
-                    '✅ Location updated: ' + currentLat.toFixed(6) + ', ' + currentLng.toFixed(6) +
-                    '<br><small>🕐 Updated: ' + lastUpdateTime.toLocaleTimeString() + '</small>';
-                document.getElementById('location_status').className = 'location-status location-success';
-            },
-            function(error) {
-                document.getElementById('location_status').innerHTML = '❌ Failed to refresh location. Please try again.';
+                    '❌ ' + errorMsg;
                 document.getElementById('location_status').className = 'location-status location-error';
             },
             {
                 enableHighAccuracy: true,
+                maximumAge: 0,  // Always get fresh location
                 timeout: 10000
             }
         );
     }
 }
 
-// Form submission - capture final location
-document.getElementById('dealForm').addEventListener('submit', function(e) {
-    // Get one final location before submitting
-    e.preventDefault();
-    
-    // Show saving message
-    const submitBtn = document.querySelector('button[type="submit"]');
-    const originalText = submitBtn.innerHTML;
-    submitBtn.innerHTML = 'Saving deal with your location...';
-    submitBtn.disabled = true;
-    
+function sendLocationToServer(dealId, lat, lng, accuracy) {
+    // Send location to server every 5 seconds
+    fetch('/update_live_location/' + dealId, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            latitude: lat,
+            longitude: lng,
+            accuracy: accuracy
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            document.getElementById('location_status').innerHTML = 
+                '✅ Location sent to server! Admin can see your movement.' +
+                '<br><small>📍 ' + lat.toFixed(6) + ', ' + lng.toFixed(6) + '</small>';
+        }
+    })
+    .catch(error => {
+        console.log('Error sending location:', error);
+    });
+}
+
+function refreshLocation() {
     if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(
             function(position) {
-                // Final location update
-                document.getElementById('live_latitude').value = position.coords.latitude;
-                document.getElementById('live_longitude').value = position.coords.longitude;
-                
-                // Stop watching location
-                if (watchId) {
-                    navigator.geolocation.clearWatch(watchId);
-                }
-                
-                // Submit the form
-                document.getElementById('dealForm').submit();
+                currentLat = position.coords.latitude;
+                currentLng = position.coords.longitude;
+                document.getElementById('live_latitude').value = currentLat;
+                document.getElementById('live_longitude').value = currentLng;
+                document.getElementById('location_status').innerHTML = 
+                    '✅ Location updated: ' + currentLat.toFixed(6) + ', ' + currentLng.toFixed(6);
             },
             function(error) {
-                // Submit with last known location or without location
-                if (watchId) {
-                    navigator.geolocation.clearWatch(watchId);
-                }
-                document.getElementById('dealForm').submit();
+                document.getElementById('location_status').innerHTML = '❌ Failed to refresh location';
             }
         );
-    } else {
-        document.getElementById('dealForm').submit();
     }
+}
+
+// Form submission
+document.getElementById('dealForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const submitBtn = document.querySelector('button[type="submit"]');
+    submitBtn.innerHTML = 'Creating deal and starting live tracking...';
+    submitBtn.disabled = true;
+    
+    // Get final location
+    navigator.geolocation.getCurrentPosition(
+        function(position) {
+            document.getElementById('live_latitude').value = position.coords.latitude;
+            document.getElementById('live_longitude').value = position.coords.longitude;
+            
+            // Submit the form
+            const formData = new FormData(document.getElementById('dealForm'));
+            
+            fetch('/save', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.text())
+            .then(dealId => {
+                // Store the deal ID for continuous tracking
+                currentDealId = dealId;
+                document.getElementById('deal_id').value = dealId;
+                
+                // Start sending location every 5 seconds
+                locationUpdateInterval = setInterval(() => {
+                    if (currentLat && currentLng && currentDealId) {
+                        sendLocationToServer(currentDealId, currentLat, currentLng, 0);
+                    }
+                }, 5000);
+                
+                submitBtn.innerHTML = 'Deal Saved! Tracking active.';
+                setTimeout(() => {
+                    window.location.href = '/dealstocustomer';
+                }, 2000);
+            })
+            .catch(error => {
+                submitBtn.innerHTML = 'Error saving deal. Try again.';
+                submitBtn.disabled = false;
+            });
+        },
+        function(error) {
+            document.getElementById('dealForm').submit();
+        }
+    );
 });
 
 // Start tracking when page loads
 window.onload = function() {
-    startTrackingLocation();
+    startContinuousTracking();
 }
 
-// Optional: Warn user if they try to close the page while tracking
-window.addEventListener('beforeunload', function(e) {
-    if (watchId !== null && document.getElementById('live_latitude').value === '') {
-        // Only warn if no location has been captured yet
-        e.preventDefault();
-        e.returnValue = 'Location is being tracked for your deal. Are you sure you want to leave?';
+// Stop tracking when page closes
+window.addEventListener('beforeunload', function() {
+    if (locationUpdateInterval) {
+        clearInterval(locationUpdateInterval);
+    }
+    if (watchId) {
+        navigator.geolocation.clearWatch(watchId);
     }
 });
 </script>
