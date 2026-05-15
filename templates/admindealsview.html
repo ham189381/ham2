@@ -2,864 +2,175 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>Available Deals on Wheels - Admin View with Live Tracking</title>
-    <!-- Font Awesome for icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <!-- Leaflet CSS for maps (free, no API key needed) -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - Live Deal Tracking</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
-
+        
         body {
-            font-family: 'Inter', sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            padding: 20px;
-            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f5f5;
         }
-
+        
         .container {
-            max-width: 1400px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-
-        /* Header Styles */
-        .header {
-            text-align: center;
-            margin-bottom: 40px;
-        }
-
-        .header h2 {
-            font-size: 2.5rem;
-            font-weight: 800;
-            color: white;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
-            margin-bottom: 10px;
-        }
-
-        .header p {
-            color: rgba(255,255,255,0.9);
-            font-size: 1.1rem;
-        }
-
-        /* Stats Bar */
-        .stats-bar {
-            background: white;
-            border-radius: 15px;
-            padding: 20px;
-            margin-bottom: 30px;
             display: flex;
-            justify-content: space-around;
-            flex-wrap: wrap;
-            gap: 20px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            height: 100vh;
         }
-
-        .stat-item {
-            text-align: center;
-            flex: 1;
-            min-width: 120px;
-        }
-
-        .stat-number {
-            font-size: 2rem;
-            font-weight: 800;
-            color: #667eea;
-        }
-
-        .stat-label {
-            color: #666;
-            font-size: 0.9rem;
-            margin-top: 5px;
-        }
-
-        /* Grid Layout */
-        .deals-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(450px, 1fr));
-            gap: 30px;
-            margin-top: 20px;
-        }
-
-        /* Card Styles */
-        .deal-card {
+        
+        .deals-list {
+            width: 350px;
             background: white;
-            border-radius: 20px;
-            overflow: hidden;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-            transition: all 0.3s ease;
-            position: relative;
-            animation: fadeInUp 0.5s ease;
+            overflow-y: auto;
+            box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+            z-index: 1;
         }
-
-        .deal-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 15px 40px rgba(0,0,0,0.2);
-        }
-
-        /* Hot Badge */
-        .hot-badge {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-            color: white;
-            padding: 5px 15px;
-            border-radius: 25px;
-            font-size: 0.8rem;
-            font-weight: 700;
-            z-index: 10;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-            animation: pulse 2s infinite;
-        }
-
-        /* Card Header */
-        .card-header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 20px;
-            text-align: center;
-        }
-
-        .card-header h3 {
-            font-size: 1.5rem;
-            font-weight: 700;
-            margin: 0;
-        }
-
-        .material-type {
-            display: inline-block;
-            background: rgba(255,255,255,0.2);
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 0.8rem;
-            margin-top: 10px;
-        }
-
-        /* Card Body */
-        .card-body {
-            padding: 20px;
-        }
-
-        .info-row {
-            display: flex;
-            align-items: center;
-            margin-bottom: 15px;
-            padding: 8px;
-            background: #f8f9fa;
-            border-radius: 10px;
-            transition: all 0.2s ease;
-        }
-
-        .info-row:hover {
-            background: #e9ecef;
-            transform: translateX(5px);
-        }
-
-        .info-icon {
-            width: 35px;
-            color: #667eea;
-            font-size: 1.2rem;
-        }
-
-        .info-content {
-            flex: 1;
-        }
-
-        .info-label {
-            font-size: 0.75rem;
-            color: #999;
-            text-transform: uppercase;
-            font-weight: 600;
-        }
-
-        .info-value {
-            font-size: 1rem;
-            font-weight: 500;
-            color: #333;
-        }
-
-        .phone-link {
-            color: #667eea;
-            text-decoration: none;
-            font-weight: 600;
-        }
-
-        .phone-link:hover {
-            text-decoration: underline;
-        }
-
-        /* Map Styles */
+        
         .map-container {
-            margin: 15px 0;
-            border-radius: 12px;
-            overflow: hidden;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            flex: 1;
+            position: relative;
         }
-
-        .live-map {
+        
+        #map {
+            height: 100%;
             width: 100%;
-            height: 300px;
+        }
+        
+        .deal-card {
+            padding: 15px;
+            border-bottom: 1px solid #e0e0e0;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        
+        .deal-card:hover {
             background: #f0f0f0;
         }
-
-        .location-link {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            background: #2196F3;
-            color: white;
-            padding: 8px 16px;
-            border-radius: 8px;
-            text-decoration: none;
-            font-size: 0.85rem;
-            font-weight: 500;
-            transition: all 0.2s ease;
-            margin-top: 10px;
-            margin-right: 10px;
+        
+        .deal-card.active {
+            background: #e3f2fd;
+            border-left: 4px solid #2196f3;
         }
-
-        .location-link:hover {
-            background: #0b7dda;
-            transform: translateY(-2px);
+        
+        .deal-card h3 {
+            color: #333;
+            margin-bottom: 8px;
+            font-size: 16px;
         }
-
-        .tracking-btn {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            background: #28a745;
-            color: white;
-            padding: 8px 16px;
-            border-radius: 8px;
-            text-decoration: none;
-            font-size: 0.85rem;
-            font-weight: 500;
-            transition: all 0.2s ease;
-            margin-top: 10px;
-            border: none;
-            cursor: pointer;
-        }
-
-        .tracking-btn.stop {
-            background: #dc3545;
-        }
-
-        .tracking-btn:hover {
-            transform: translateY(-2px);
-        }
-
-        .coordinates {
-            display: block;
-            font-size: 0.7rem;
+        
+        .deal-card p {
             color: #666;
-            margin-top: 8px;
-            font-family: monospace;
+            font-size: 12px;
+            margin: 4px 0;
         }
-
-        .no-location {
+        
+        .live-badge {
             display: inline-block;
-            background: #f8d7da;
-            color: #721c24;
-            padding: 8px 12px;
-            border-radius: 8px;
-            font-size: 0.8rem;
-            margin-top: 10px;
+            background: #4caf50;
+            color: white;
+            font-size: 10px;
+            padding: 2px 6px;
+            border-radius: 3px;
+            margin-left: 8px;
         }
-
-        .live-status {
+        
+        .location-time {
+            font-size: 10px;
+            color: #999;
+            margin-top: 5px;
+        }
+        
+        .status {
             display: inline-block;
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 0.7rem;
-            font-weight: bold;
-            margin-left: 10px;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 5px;
         }
-
-        .status-active {
-            background: #28a745;
-            color: white;
+        
+        .status.active {
+            background: #4caf50;
+            animation: pulse 1.5s infinite;
         }
-
-        .status-inactive {
-            background: #dc3545;
-            color: white;
+        
+        .status.inactive {
+            background: #f44336;
         }
-
-        /* Image Gallery */
-        .image-gallery {
-            display: flex;
-            gap: 10px;
-            margin-top: 15px;
-            flex-wrap: wrap;
+        
+        @keyframes pulse {
+            0% {
+                box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.7);
+            }
+            70% {
+                box-shadow: 0 0 0 10px rgba(76, 175, 80, 0);
+            }
+            100% {
+                box-shadow: 0 0 0 0 rgba(76, 175, 80, 0);
+            }
         }
-
-        .deal-image {
-            flex: 1;
-            min-width: 120px;
-            height: 120px;
-            object-fit: cover;
-            border-radius: 10px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-        }
-
-        .deal-image:hover {
-            transform: scale(1.05);
-            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-        }
-
-        /* Card Footer */
-        .card-footer {
-            background: #f8f9fa;
-            padding: 15px 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 10px;
-        }
-
-        .price-tag {
+        
+        .header {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
-            padding: 8px 16px;
-            border-radius: 25px;
-            font-size: 0.85rem;
-            font-weight: 600;
+            padding: 20px;
+            position: sticky;
+            top: 0;
+            z-index: 10;
         }
-
-        .call-btn {
-            background: #28a745;
-            color: white;
+        
+        .header h2 {
+            font-size: 18px;
+        }
+        
+        .header p {
+            font-size: 12px;
+            opacity: 0.9;
+            margin-top: 5px;
+        }
+        
+        .refresh-btn {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            z-index: 1000;
+            background: white;
+            border: none;
             padding: 10px 20px;
             border-radius: 25px;
-            text-decoration: none;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            font-weight: 600;
-            transition: all 0.2s ease;
-        }
-
-        .call-btn:hover {
-            background: #218838;
-            transform: scale(1.05);
-        }
-
-        /* Modal Styles */
-        .modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.9);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 1000;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
             cursor: pointer;
-        }
-
-        .modal {
-            background: white;
-            border-radius: 15px;
-            max-width: 90%;
-            max-height: 90%;
-            overflow: auto;
-            cursor: default;
-        }
-
-        .modal-header {
-            padding: 15px 20px;
-            border-bottom: 1px solid #ddd;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .modal-header h3 {
-            margin: 0;
-        }
-
-        .close-modal {
-            font-size: 30px;
-            cursor: pointer;
-            color: #999;
-            transition: color 0.2s;
-        }
-
-        .close-modal:hover {
-            color: #333;
-        }
-
-        .modal-body {
-            padding: 20px;
-            text-align: center;
-        }
-
-        .modal-body img {
-            max-width: 100%;
-            max-height: 70vh;
-            border-radius: 10px;
-        }
-
-        /* Empty State */
-        .empty-state {
-            text-align: center;
-            padding: 60px 20px;
-            background: white;
-            border-radius: 20px;
-        }
-
-        .empty-state i {
-            font-size: 4rem;
+            font-weight: bold;
             color: #667eea;
-            margin-bottom: 20px;
         }
-
-        .empty-state p {
-            font-size: 1.2rem;
-            color: #666;
+        
+        .deal-details-panel {
+            position: absolute;
+            bottom: 20px;
+            left: 370px;
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            max-width: 300px;
+            z-index: 1000;
+            display: none;
         }
-
-        /* Animations */
-        @keyframes fadeInUp {
-            from {
-                opacity: 0;
-                transform: translateY(30px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+        
+        .deal-details-panel.show {
+            display: block;
         }
-
-        @keyframes pulse {
-            0%, 100% {
-                transform: scale(1);
-            }
-            50% {
-                transform: scale(1.05);
-            }
-        }
-
-        @keyframes blink {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
-        }
-
-        /* Responsive Design */
+        
         @media (max-width: 768px) {
-            body {
-                padding: 10px;
+            .deals-list {
+                width: 280px;
             }
-
-            .container {
-                padding: 10px;
-            }
-
-            .header h2 {
-                font-size: 1.8rem;
-            }
-
-            .deals-grid {
-                grid-template-columns: 1fr;
-                gap: 20px;
-            }
-
-            .stats-bar {
-                flex-direction: column;
-                gap: 10px;
-            }
-
-            .stat-item {
-                min-width: auto;
-            }
-
-            .live-map {
-                height: 250px;
+            .deal-details-panel {
+                left: 300px;
             }
         }
     </style>
-</head>
-<body>
-
-    <div class="container">
-        <div class="header">
-            <h2><i class="fas fa-fire"></i> Available Deals on Wheels</h2>
-            <p>Live track your suppliers and deals in real-time</p>
-        </div>
-
-        <!-- Stats Bar -->
-        <div class="stats-bar">
-            <div class="stat-item">
-                <div class="stat-number">{{ data|length }}</div>
-                <div class="stat-label">Total Deals</div>
-            </div>
-            <div class="stat-item">
-                <div class="stat-number">
-                    {% set with_location = namespace(count=0) %}
-                    {% for row in data %}
-                        {% if row.live_latitude and row.live_longitude %}
-                            {% set with_location.count = with_location.count + 1 %}
-                        {% endif %}
-                    {% endfor %}
-                    {{ with_location.count }}
-                </div>
-                <div class="stat-label">With Live Location</div>
-            </div>
-            <div class="stat-item">
-                <div class="stat-number">
-                    {% set materials = [] %}
-                    {% for row in data %}
-                        {% if row.materialname not in materials %}
-                            {% set _ = materials.append(row.materialname) %}
-                        {% endif %}
-                    {% endfor %}
-                    {{ materials|length }}
-                </div>
-                <div class="stat-label">Materials</div>
-            </div>
-        </div>
-
-        <!-- Deals Grid -->
-        <div class="deals-grid">
-            {% for row in data %}
-            <div class="deal-card" id="deal-card-{{ row.id }}">
-                {% if loop.first %}
-                <div class="hot-badge">
-                    <i class="fas fa-fire"></i> HOT DEAL
-                </div>
-                {% endif %}
-                
-                <div class="card-header">
-                    <h3>{{ row.materialname|upper }}</h3>
-                    <span class="material-type">
-                        <i class="fas fa-cube"></i> {{ row.materialname }}
-                    </span>
-                </div>
-
-                <div class="card-body">
-                    <div class="info-row">
-                        <div class="info-icon">
-                            <i class="fas fa-user"></i>
-                        </div>
-                        <div class="info-content">
-                            <div class="info-label">Supplier</div>
-                            <div class="info-value">{{ row.suppliername }}</div>
-                        </div>
-                    </div>
-
-                    <div class="info-row">
-                        <div class="info-icon">
-                            <i class="fas fa-truck"></i>
-                        </div>
-                        <div class="info-content">
-                            <div class="info-label">Tipper</div>
-                            <div class="info-value">{{ row.tippername }}</div>
-                        </div>
-                    </div>
-
-                    <div class="info-row">
-                        <div class="info-icon">
-                            <i class="fas fa-map-marker-alt"></i>
-                        </div>
-                        <div class="info-content">
-                            <div class="info-label">Location</div>
-                            <div class="info-value">{{ row.location }}</div>
-                        </div>
-                    </div>
-
-                    <div class="info-row">
-                        <div class="info-icon">
-                            <i class="fas fa-phone-alt"></i>
-                        </div>
-                        <div class="info-content">
-                            <div class="info-label">Phone</div>
-                            <div class="info-value">
-                                <a href="tel:{{ row.phone }}" class="phone-link">
-                                    <i class="fas fa-phone"></i> {{ row.phone }}
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Live Location Section with Live Tracking Map -->
-                    {% if row.live_latitude and row.live_longitude %}
-                    <div class="map-container">
-                        <div id="live-map-{{ row.id }}" class="live-map"></div>
-                    </div>
-                    
-                    <div style="margin-top: 10px;">
-                        <a href="https://www.google.com/maps?q={{ row.live_latitude }},{{ row.live_longitude }}" 
-                           target="_blank" 
-                           class="location-link">
-                            <i class="fas fa-external-link-alt"></i> Open in Google Maps
-                        </a>
-                        <button onclick="startLiveTracking({{ row.id }}, {{ row.live_latitude }}, {{ row.live_longitude }})" 
-                                class="tracking-btn" id="tracking-btn-{{ row.id }}">
-                            <i class="fas fa-play"></i> Start Live Tracking
-                        </button>
-                        <button onclick="stopLiveTracking({{ row.id }})" 
-                                class="tracking-btn stop" id="stop-btn-{{ row.id }}" style="display: none;">
-                            <i class="fas fa-stop"></i> Stop Tracking
-                        </button>
-                    </div>
-                    
-                    <div id="tracking-status-{{ row.id }}" style="margin-top: 10px; font-size: 12px;">
-                        <span id="location-time-{{ row.id }}"></span>
-                        <span id="live-badge-{{ row.id }}" class="live-status status-inactive">● Not Tracking</span>
-                    </div>
-                    
-                    <span class="coordinates">
-                        <i class="fas fa-crosshairs"></i> {{ "%.6f"|format(row.live_latitude) }}, {{ "%.6f"|format(row.live_longitude) }}
-                    </span>
-                    {% else %}
-                    <div class="no-location">
-                        <i class="fas fa-map-pin"></i> No location captured for this deal
-                    </div>
-                    {% endif %}
-
-                    <!-- Image Gallery -->
-                    <div class="image-gallery">
-                        {% if row.imageone %}
-                        <img src="{{ row.imageone }}" 
-                             alt="Deal image 1" 
-                             class="deal-image"
-                             onclick="openModal(this.src)">
-                        {% endif %}
-                        
-                        {% if row.imagetwo %}
-                        <img src="{{ row.imagetwo }}" 
-                             alt="Deal image 2" 
-                             class="deal-image"
-                             onclick="openModal(this.src)">
-                        {% endif %}
-                    </div>
-                </div>
-
-                <div class="card-footer">
-                    <span class="price-tag">
-                        <i class="fas fa-tag"></i> Call for Price
-                    </span>
-                    <a href="tel:{{ row.phone }}" class="call-btn">
-                        <i class="fas fa-phone-alt"></i> Call Now
-                    </a>
-                </div>
-            </div>
-            {% else %}
-            <div class="empty-state">
-                <i class="fas fa-box-open"></i>
-                <p>No deals available at the moment.</p>
-                <p style="font-size: 0.9rem; margin-top: 10px;">Check back later for exciting deals!</p>
-            </div>
-            {% endfor %}
-        </div>
-    </div>
-
-    <!-- Image Modal -->
-    <div id="imageModal" class="modal-overlay" style="display: none;" onclick="closeModal()">
-        <div class="modal" onclick="event.stopPropagation()">
-            <div class="modal-header">
-                <h3><i class="fas fa-image"></i> Deal Image</h3>
-                <span class="close-modal" onclick="closeModal()">&times;</span>
-            </div>
-            <div class="modal-body">
-                <img id="modalImage" src="" alt="Enlarged view">
-            </div>
-        </div>
-    </div>
-
-    <script>
-        // Store all tracking intervals
-        const trackingIntervals = {};
-        const maps = {};
-        const markers = {};
-        const paths = {};
-        const pathCoordinates = {};
-
-        // Initialize a map for a deal
-        function initMap(dealId, lat, lng) {
-            const mapDiv = document.getElementById(`live-map-${dealId}`);
-            if (!mapDiv) return null;
-            
-            // Create map
-            const map = L.map(`live-map-${dealId}`).setView([lat, lng], 15);
-            
-            // Add tile layer (OpenStreetMap)
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '© OpenStreetMap contributors'
-            }).addTo(map);
-            
-            // Add marker
-            const marker = L.marker([lat, lng]).addTo(map);
-            marker.bindTooltip('Current Location').openTooltip();
-            
-            // Store map and marker
-            maps[dealId] = map;
-            markers[dealId] = marker;
-            pathCoordinates[dealId] = [[lat, lng]];
-            
-            // Add path line
-            const pathLine = L.polyline(pathCoordinates[dealId], {
-                color: 'red',
-                weight: 3,
-                opacity: 0.7
-            }).addTo(map);
-            paths[dealId] = pathLine;
-            
-            return map;
-        }
-
-        // Start live tracking for a deal
-        function startLiveTracking(dealId, startLat, startLng) {
-            // Initialize map if not already done
-            if (!maps[dealId]) {
-                initMap(dealId, startLat, startLng);
-            }
-            
-            // Stop any existing tracking
-            if (trackingIntervals[dealId]) {
-                clearInterval(trackingIntervals[dealId]);
-            }
-            
-            // Update UI
-            document.getElementById(`tracking-btn-${dealId}`).style.display = 'none';
-            document.getElementById(`stop-btn-${dealId}`).style.display = 'inline-flex';
-            document.getElementById(`live-badge-${dealId}`).className = 'live-status status-active';
-            document.getElementById(`live-badge-${dealId}`).innerHTML = '● Live Tracking Active';
-            
-            // Start fetching location every 3 seconds
-            trackingIntervals[dealId] = setInterval(async () => {
-                try {
-                    const response = await fetch(`/get_deal_location/${dealId}`);
-                    const data = await response.json();
-                    
-                    if (data.latitude && data.longitude) {
-                        const newLat = data.latitude;
-                        const newLng = data.longitude;
-                        
-                        // Update marker position
-                        if (markers[dealId]) {
-                            markers[dealId].setLatLng([newLat, newLng]);
-                        } else {
-                            // Recreate marker if lost
-                            markers[dealId] = L.marker([newLat, newLng]).addTo(maps[dealId]);
-                        }
-                        
-                        // Center map on new location
-                        if (maps[dealId]) {
-                            maps[dealId].setView([newLat, newLng], 15);
-                        }
-                        
-                        // Add to path history
-                        if (pathCoordinates[dealId]) {
-                            pathCoordinates[dealId].push([newLat, newLng]);
-                            // Keep last 100 points for performance
-                            if (pathCoordinates[dealId].length > 100) {
-                                pathCoordinates[dealId].shift();
-                            }
-                            
-                            // Update path line
-                            if (paths[dealId]) {
-                                maps[dealId].removeLayer(paths[dealId]);
-                            }
-                            paths[dealId] = L.polyline(pathCoordinates[dealId], {
-                                color: 'red',
-                                weight: 3,
-                                opacity: 0.7
-                            }).addTo(maps[dealId]);
-                        }
-                        
-                        // Update timestamp display
-                        const timestamp = data.timestamp ? new Date(data.timestamp).toLocaleTimeString() : new Date().toLocaleTimeString();
-                        document.getElementById(`location-time-${dealId}`).innerHTML = `
-                            <i class="fas fa-clock"></i> Last update: ${timestamp}
-                            <br><i class="fas fa-chart-line"></i> Movement tracked: ${pathCoordinates[dealId].length} points
-                        `;
-                        
-                        // Add accuracy info if available
-                        if (data.accuracy) {
-                            let accuracyText = '';
-                            if (data.accuracy < 50) {
-                                accuracyText = '🎯 High accuracy';
-                            } else if (data.accuracy < 200) {
-                                accuracyText = '📍 Medium accuracy';
-                            } else {
-                                accuracyText = '⚠️ Low accuracy';
-                            }
-                            document.getElementById(`location-time-${dealId}`).innerHTML += `<br>${accuracyText} (±${Math.round(data.accuracy)}m)`;
-                        }
-                    }
-                } catch (error) {
-                    console.log(`Error fetching location for deal ${dealId}:`, error);
-                }
-            }, 3000); // Update every 3 seconds
-        }
-
-        // Stop live tracking for a deal
-        function stopLiveTracking(dealId) {
-            if (trackingIntervals[dealId]) {
-                clearInterval(trackingIntervals[dealId]);
-                delete trackingIntervals[dealId];
-            }
-            
-            // Update UI
-            document.getElementById(`tracking-btn-${dealId}`).style.display = 'inline-flex';
-            document.getElementById(`stop-btn-${dealId}`).style.display = 'none';
-            document.getElementById(`live-badge-${dealId}`).className = 'live-status status-inactive';
-            document.getElementById(`live-badge-${dealId}`).innerHTML = '● Tracking Stopped';
-            document.getElementById(`location-time-${dealId}`).innerHTML += '<br><i class="fas fa-stop"></i> Tracking stopped';
-        }
-
-        // Initialize maps for all deals that have location data
-        document.addEventListener('DOMContentLoaded', function() {
-            {% for row in data %}
-                {% if row.live_latitude and row.live_longitude %}
-                    initMap({{ row.id }}, {{ row.live_latitude }}, {{ row.live_longitude }});
-                {% endif %}
-            {% endfor %}
-        });
-
-        // Modal functions
-        function openModal(src) {
-            document.getElementById('modalImage').src = src;
-            document.getElementById('imageModal').style.display = 'flex';
-            document.body.style.overflow = 'hidden';
-        }
-        
-        function closeModal() {
-            document.getElementById('imageModal').style.display = 'none';
-            document.body.style.overflow = 'auto';
-        }
-        
-        // Close modal with Escape key
-        document.addEventListener('keydown', function(event) {
-            if (event.key === 'Escape') {
-                closeModal();
-            }
-        });
-        
-        // Clean up intervals when page unloads
-        window.addEventListener('beforeunload', function() {
-            for (const dealId in trackingIntervals) {
-                if (trackingIntervals[dealId]) {
-                    clearInterval(trackingIntervals[dealId]);
-                }
-            }
-        });
-    </script>
-</body>
-</html>
