@@ -99,34 +99,23 @@ def save_image(file, prefix=""):
     return upload_to_cloudinary(file, prefix)
 
 # -------------------------
-# Database connection with connection pooling
+# Database connection (local)
 # -------------------------
-class DatabaseConnection:
-    def __init__(self):
-        self.connection = None
-    
-    def get_connection(self):
-        if self.connection is None or self.connection.closed:
-            database_url = os.environ.get("DATABASE_URL")
-            if database_url:
-                if database_url.startswith("postgres://"):
-                    database_url = database_url.replace("postgres://", "postgresql://", 1)
-                self.connection = psycopg2.connect(database_url)
-            else:
-                self.connection = psycopg2.connect(
-                    host="127.0.0.1",
-                    database="drivers_db",
-                    user="postgres",
-                    password="1234",
-                    port="5432"
-                )
-        return self.connection
-
-db_pool = DatabaseConnection()
-
 def get_db_connection():
     """Return a PostgreSQL connection for local development or production."""
-    return db_pool.get_connection()
+    database_url = os.environ.get("DATABASE_URL")
+    if database_url:
+        if database_url.startswith("postgres://"):
+            database_url = database_url.replace("postgres://", "postgresql://", 1)
+        return psycopg2.connect(database_url)
+    else:
+        return psycopg2.connect(
+            host="127.0.0.1",
+            database="drivers_db",
+            user="postgres",
+            password="1234",
+            port="5432"
+        )
 
 # -------------------------
 # Create all tables (with location columns)
@@ -151,6 +140,7 @@ def create_drivers_table():
     """)
     conn.commit()
     cursor.close()
+    conn.close()
 
 def create_deals_table():
     conn = get_db_connection()
@@ -172,6 +162,7 @@ def create_deals_table():
     """)
     conn.commit()
     cursor.close()
+    conn.close()
 
 def create_orders_table():
     conn = get_db_connection()
@@ -193,6 +184,7 @@ def create_orders_table():
     """)
     conn.commit()
     cursor.close()
+    conn.close()
 
 def create_tracking_table():
     conn = get_db_connection()
@@ -209,15 +201,14 @@ def create_tracking_table():
     """)
     conn.commit()
     cursor.close()
+    conn.close()
+
 
 # Create all tables when app starts
-try:
-    create_drivers_table()
-    create_deals_table()
-    create_orders_table()
-    create_tracking_table()
-except Exception as e:
-    print(f"Table creation warning: {e}")
+create_drivers_table()
+create_deals_table()
+create_orders_table()
+create_tracking_table()
 
 # Fix existing tables - add missing columns
 def fix_existing_tables():
@@ -241,6 +232,7 @@ def fix_existing_tables():
         conn.rollback()
     finally:
         cursor.close()
+        conn.close()
 
 # Migrate deals table to add live location columns
 def migrate_deals_table():
@@ -279,12 +271,10 @@ def migrate_deals_table():
         conn.rollback()
     finally:
         cursor.close()
+        conn.close()
 
-try:
-    fix_existing_tables()
-    migrate_deals_table()
-except Exception as e:
-    print(f"Migration warning: {e}")
+fix_existing_tables()
+migrate_deals_table()
 
 # -------------------------
 # Serve uploaded files (for local fallback)
@@ -306,9 +296,12 @@ def home():
     columns = [desc[0] for desc in cursor.description]
     drivers = [dict(zip(columns, row)) for row in rows]
     cursor.close()
+    conn.close()
     return render_template("sofery.html", drivers=drivers)
 
+
 # UPDATE LIVE LOCATION FOR DEALS
+
 @app.route('/update_live_location/<int:deal_id>', methods=['POST'])
 def update_live_location(deal_id):
     """Receive live location updates from the user's phone"""
@@ -318,6 +311,7 @@ def update_live_location(deal_id):
         longitude = data.get('longitude')
         accuracy = data.get('accuracy', 0)
         
+        # Validate coordinates
         if not latitude or not longitude:
             return jsonify({"status": "error", "message": "Invalid coordinates"}), 400
         
@@ -338,6 +332,7 @@ def update_live_location(deal_id):
         
         conn.commit()
         cursor.close()
+        conn.close()
         
         return jsonify({"status": "success"}), 200
     except Exception as e:
@@ -347,119 +342,119 @@ def update_live_location(deal_id):
 @app.route('/get_deal_location/<int:deal_id>')
 def get_deal_location(deal_id):
     """Get the latest location for a specific deal"""
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute("""
-        SELECT latitude, longitude, timestamp, accuracy 
-        FROM deal_tracking 
-        WHERE deal_id = %s 
-        ORDER BY timestamp DESC 
-        LIMIT 1
-    """, (deal_id,))
-    location = cursor.fetchone()
-    cursor.close()
-    
-    if location:
-        return jsonify({
-            "latitude": location[0],
-            "longitude": location[1],
-            "timestamp": location[2],
-            "accuracy": location[3]
-        })
-    return jsonify({"error": "No location found"}), 404
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT latitude, longitude, timestamp, accuracy 
+            FROM deal_tracking 
+            WHERE deal_id = %s 
+            ORDER BY timestamp DESC 
+            LIMIT 1
+        """, (deal_id,))
+        location = cursor.fetchone()
+        cursor.close()
+        conn.close()
+        
+        if location:
+            return jsonify({
+                "latitude": location[0],
+                "longitude": location[1],
+                "timestamp": location[2],
+                "accuracy": location[3]
+            })
+        return jsonify({"error": "No location found"}), 404
+    except Exception as e:
+        print(f"Error getting location: {e}")
+        return jsonify({"error": str(e)}), 500
 
 @app.route('/get_deal_tracking_history/<int:deal_id>')
 def get_deal_tracking_history(deal_id):
-    """Get full movement history for a deal"""
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute("""
-        SELECT latitude, longitude, timestamp, accuracy 
-        FROM deal_tracking 
-        WHERE deal_id = %s 
-        ORDER BY timestamp ASC
-        LIMIT 100
-    """, (deal_id,))
-    history = cursor.fetchall()
-    cursor.close()
-    
-    return jsonify([{
-        "latitude": h[0],
-        "longitude": h[1],
-        "timestamp": h[2],
-        "accuracy": h[3]
-    } for h in history])
+    """Get full movement history for a deal - limited to last 50 records for performance"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT latitude, longitude, timestamp, accuracy 
+            FROM deal_tracking 
+            WHERE deal_id = %s 
+            ORDER BY timestamp DESC
+            LIMIT 50
+        """, (deal_id,))
+        history = cursor.fetchall()
+        cursor.close()
+        conn.close()
+        
+        # Return in chronological order (oldest first)
+        history_reversed = list(reversed(history))
+        
+        return jsonify([{
+            "latitude": h[0],
+            "longitude": h[1],
+            "timestamp": h[2],
+            "accuracy": h[3]
+        } for h in history_reversed])
+    except Exception as e:
+        print(f"Error getting tracking history: {e}")
+        return jsonify([])
 
-# Simplified admin deals view (without heavy map)
-@app.route("/dealstoadmin")
-def dealstoadmin():
-    """Admin view with simple table and location links"""
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute("""
-        SELECT d.*, 
-               dt.latitude as last_latitude, 
-               dt.longitude as last_longitude,
-               dt.timestamp as last_update
-        FROM deals d
-        LEFT JOIN (
-            SELECT DISTINCT ON (deal_id) deal_id, latitude, longitude, timestamp
-            FROM deal_tracking
-            ORDER BY deal_id, timestamp DESC
-        ) dt ON d.id = dt.deal_id
-        ORDER BY d.created_at DESC
-    """)
-    rows = cursor.fetchall()
-    columns = [desc[0] for desc in cursor.description]
-    data = [dict(zip(columns, row)) for row in rows]
-    cursor.close()
-    return render_template("admindealsview.html", data=data)
-
-# Simple tracking page without heavy JavaScript
-@app.route("/track_deal/<int:deal_id>")
-def track_deal(deal_id):
-    """Dedicated tracking page for a specific deal"""
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM deals WHERE id = %s", (deal_id,))
-    deal = cursor.fetchone()
-    cursor.close()
-    
-    if not deal:
-        return "Deal not found", 404
-    
-    columns = [desc[0] for desc in cursor.description] if cursor.description else []
-    deal_dict = dict(zip(columns, deal)) if columns else {}
-    
-    return render_template("deal_tracking.html", deal=deal_dict, deal_id=deal_id)
-
-# API endpoint for admin
+# API endpoints for admin live tracking
 @app.route("/api/deal_locations")
 def get_all_deal_locations():
     """API endpoint to get all active deals with their latest locations"""
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute("""
-        SELECT d.id, d.suppliername, d.materialname, d.tippername, d.phone,
-               d.live_latitude, d.live_longitude,
-               dt.latitude as last_latitude, 
-               dt.longitude as last_longitude,
-               dt.timestamp as last_update
-        FROM deals d
-        LEFT JOIN (
-            SELECT DISTINCT ON (deal_id) deal_id, latitude, longitude, timestamp
-            FROM deal_tracking
-            ORDER BY deal_id, timestamp DESC
-        ) dt ON d.id = dt.deal_id
-        WHERE d.live_latitude IS NOT NULL OR dt.latitude IS NOT NULL
-        ORDER BY d.created_at DESC
-        LIMIT 50
-    """)
-    rows = cursor.fetchall()
-    columns = [desc[0] for desc in cursor.description]
-    deals = [dict(zip(columns, row)) for row in rows]
-    cursor.close()
-    return jsonify(deals)
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT d.id, d.suppliername, d.materialname, d.tippername, d.phone,
+                   d.live_latitude, d.live_longitude,
+                   dt.latitude as last_latitude, 
+                   dt.longitude as last_longitude,
+                   dt.timestamp as last_update
+            FROM deals d
+            LEFT JOIN (
+                SELECT DISTINCT ON (deal_id) deal_id, latitude, longitude, timestamp
+                FROM deal_tracking
+                ORDER BY deal_id, timestamp DESC
+            ) dt ON d.id = dt.deal_id
+            WHERE d.live_latitude IS NOT NULL OR dt.latitude IS NOT NULL
+            ORDER BY d.created_at DESC
+            LIMIT 50
+        """)
+        rows = cursor.fetchall()
+        columns = [desc[0] for desc in cursor.description]
+        deals = [dict(zip(columns, row)) for row in rows]
+        cursor.close()
+        conn.close()
+        return jsonify(deals)
+    except Exception as e:
+        print(f"Error getting deal locations: {e}")
+        return jsonify([])
+
+@app.route("/track_deal/<int:deal_id>")
+def track_deal(deal_id):
+    """Dedicated tracking page for a specific deal"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM deals WHERE id = %s", (deal_id,))
+        row = cursor.fetchone()
+        
+        if not row:
+            cursor.close()
+            conn.close()
+            return "Deal not found", 404
+        
+        columns = [desc[0] for desc in cursor.description]
+        deal_dict = dict(zip(columns, row))
+        
+        cursor.close()
+        conn.close()
+        
+        return render_template("deal_tracking.html", deal=deal_dict, deal_id=deal_id)
+    except Exception as e:
+        print(f"Error loading track page: {e}")
+        return "Error loading tracking page", 500
 
 @app.route('/prospect')
 def prospect():
@@ -480,6 +475,7 @@ def view_drivers():
     cursor.execute("SELECT * FROM drivers")
     drivers = cursor.fetchall()
     cursor.close()
+    conn.close()
     return render_template("driverstable.html", drivers=drivers)
 
 @app.route("/alldrivercards")
@@ -491,6 +487,7 @@ def alldrivercards():
     columns = [desc[0] for desc in cursor.description]
     drivers = [dict(zip(columns, row)) for row in rows]
     cursor.close()
+    conn.close()
     return render_template("alldrivercards.html", drivers=drivers)
 
 @app.route("/showdrivers")
@@ -506,6 +503,7 @@ def get_drivers_by_town(town):
     )
     drivers = cursor.fetchall()
     cursor.close()
+    conn.close()
     return drivers
 
 @app.route("/drivers/<town>")
@@ -559,7 +557,7 @@ def kampala_ntinda():
     return render_template("kampala_ntinda_supplires.html")
 
 # -------------------------
-# Driver Registration
+# Driver Registration (UPDATED for Cloudinary)
 # -------------------------
 @app.route("/driverdetails")
 def driverdetails():
@@ -580,6 +578,7 @@ def driver():
             image2 = request.files.get("image2")
             image3 = request.files.get("image3")
 
+            # These will now upload to Cloudinary automatically
             url1 = save_image(image1, f"driver_{name}_1")
             url2 = save_image(image2, f"driver_{name}_2")
             url3 = save_image(image3, f"driver_{name}_3")
@@ -594,6 +593,7 @@ def driver():
                   location, url1, url2, url3))
             conn.commit()
             cursor.close()
+            conn.close()
 
             return "Driver information saved successfully"
         except Exception as e:
@@ -612,6 +612,7 @@ def registereddrivers():
     columns = [desc[0] for desc in cursor.description]
     data = [dict(zip(columns, row)) for row in rows]
     cursor.close()
+    conn.close()
     return render_template("registereddriversview.html", data=data)
 
 @app.route("/alldrivers")
@@ -623,10 +624,11 @@ def alldrivers():
     columns = [desc[0] for desc in cursor.description]
     data = [dict(zip(columns, row)) for row in rows]
     cursor.close()
+    conn.close()
     return render_template("alldriversview.html", data=data)
 
 # -------------------------
-# Deals Section
+# Deals Section (UPDATED for Cloudinary with Live Location)
 # -------------------------
 @app.route("/deals")
 def deals():
@@ -641,9 +643,11 @@ def save():
         location = request.form["location"]
         phone = request.form["phone"]
         
+        # Get live location from form (sent from frontend)
         live_latitude = request.form.get("live_latitude")
         live_longitude = request.form.get("live_longitude")
         
+        # Convert to None if empty string
         if live_latitude == "" or live_latitude is None:
             live_latitude = None
         else:
@@ -668,11 +672,14 @@ def save():
         """, (suppliername, materialname, tippername, location, live_latitude, live_longitude, phone, url1, url2))
         conn.commit()
         
+        # Get the ID of the newly created deal
         cursor.execute("SELECT LASTVAL()")
         deal_id = cursor.fetchone()[0]
         
         cursor.close()
+        conn.close()
 
+        # Return success with deal ID for tracking
         tracking_url = request.url_root.rstrip('/') + f"/track_deal/{deal_id}"
         return f"""Your deal has been uploaded successfully!
         
@@ -692,6 +699,7 @@ def table():
     columns = [desc[0] for desc in cursor.description]
     data = [dict(zip(columns, row)) for row in rows]
     cursor.close()
+    conn.close()
     return render_template("table.html", data=data)
 
 @app.route("/dealstocustomer")
@@ -703,14 +711,42 @@ def dealstocustomer():
     columns = [desc[0] for desc in cursor.description]
     data = [dict(zip(columns, row)) for row in rows]
     cursor.close()
+    conn.close()
     return render_template("customerdealsview.html", data=data)
+
+@app.route("/dealstoadmin")
+def dealstoadmin():
+    """Admin view with live location tracking"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    # Get deals with their latest tracking info
+    cursor.execute("""
+        SELECT d.*, 
+               dt.latitude as last_latitude, 
+               dt.longitude as last_longitude,
+               dt.timestamp as last_update,
+               dt.accuracy as last_accuracy
+        FROM deals d
+        LEFT JOIN (
+            SELECT DISTINCT ON (deal_id) deal_id, latitude, longitude, timestamp, accuracy
+            FROM deal_tracking
+            ORDER BY deal_id, timestamp DESC
+        ) dt ON d.id = dt.deal_id
+        ORDER BY d.created_at DESC
+    """)
+    rows = cursor.fetchall()
+    columns = [desc[0] for desc in cursor.description]
+    data = [dict(zip(columns, row)) for row in rows]
+    cursor.close()
+    conn.close()
+    return render_template("admindealsview.html", data=data)
 
 @app.route("/dealspage")
 def dealspage():
     return render_template("dealspage.html")
 
 # -------------------------
-# Orders Table
+# Orders Table (UPDATED for Cloudinary)
 # -------------------------
 @app.route("/order")
 def order_form():
@@ -730,6 +766,7 @@ def submit_order():
         image1 = request.files.get("image1")
         image2 = request.files.get("image2")
 
+        # These will now upload to Cloudinary automatically
         url1 = save_image(image1, f"order_{name}_1")
         url2 = save_image(image2, f"order_{name}_2")
 
@@ -741,6 +778,7 @@ def submit_order():
         """, (name, district, town, truck_name, material_service, location, phone, url1, url2))
         conn.commit()
         cursor.close()
+        conn.close()
 
         return "Your order has been placed successfully! We will contact you soon."
     except Exception as e:
@@ -757,6 +795,7 @@ def view_orders():
     columns = [desc[0] for desc in cursor.description]
     orders = [dict(zip(columns, row)) for row in rows]
     cursor.close()
+    conn.close()
     return render_template("view_orders.html", orders=orders)
 
 @app.route("/edit_order/<int:order_id>")
@@ -767,10 +806,12 @@ def edit_order_form(order_id):
     row = cursor.fetchone()
     if not row:
         cursor.close()
+        conn.close()
         return "Order not found", 404
     columns = [desc[0] for desc in cursor.description]
     order = dict(zip(columns, row))
     cursor.close()
+    conn.close()
     return render_template("edit_order.html", order=order)
 
 @app.route("/update_order/<int:order_id>", methods=["POST"])
@@ -790,6 +831,7 @@ def update_order(order_id):
         old = cursor.fetchone()
         if not old:
             cursor.close()
+            conn.close()
             return "Order not found", 404
         old_image1, old_image2 = old
 
@@ -811,6 +853,7 @@ def update_order(order_id):
         """, (name, district, town, truck_name, material_service, location, phone, url1, url2, order_id))
         conn.commit()
         cursor.close()
+        conn.close()
         return redirect(url_for('view_orders'))
     except Exception as e:
         print(f"ERROR in update order: {str(e)}")
@@ -824,10 +867,11 @@ def delete_order(order_id):
     cursor.execute("DELETE FROM orders WHERE id = %s", (order_id,))
     conn.commit()
     cursor.close()
+    conn.close()
     return redirect(url_for('view_orders'))
 
 # -------------------------
-# WhatsApp Webhook
+# WhatsApp Webhook (unchanged)
 # -------------------------
 @app.route('/whatsapp', methods=['POST'])
 def whatsapp_reply():
@@ -847,7 +891,7 @@ def whatsapp_reply():
     return str(resp)
 
 # -------------------------
-# Search drivers
+# Search drivers by district & town (unchanged)
 # -------------------------
 @app.route("/searchdriverbydt")
 def searchdriverbydt():
@@ -871,8 +915,11 @@ def search_driversby():
     drivers = [dict(zip(columns, row)) for row in rows]
 
     cursor.close()
+    conn.close()
+
     return render_template("drivers_results.html", drivers=drivers)
 
+# Route that creates a link to a particular driver card details
 @app.route('/driver_details/<int:driver_id>')
 def driver_details(driver_id):
     conn = get_db_connection()
@@ -882,12 +929,15 @@ def driver_details(driver_id):
     
     if not row:
         cursor.close()
+        conn.close()
         return "Driver not found", 404
     
     columns = [desc[0] for desc in cursor.description]
     driver = dict(zip(columns, row))
     
     cursor.close()
+    conn.close()
+    
     return render_template("driver_details.html", driver=driver)
 
 # -------------------------
