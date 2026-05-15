@@ -2,8 +2,8 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Live Deal Tracking</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Live Deal Tracking - {{ deal.suppliername }}</title>
     <style>
         * {
             margin: 0;
@@ -12,173 +12,148 @@
         }
         
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
-            padding: 20px;
+            padding: 16px;
         }
         
         .container {
-            max-width: 1200px;
+            max-width: 600px;
             margin: 0 auto;
         }
         
         .card {
             background: white;
-            border-radius: 15px;
-            padding: 25px;
-            margin-bottom: 20px;
+            border-radius: 20px;
+            padding: 20px;
+            margin-bottom: 16px;
             box-shadow: 0 10px 30px rgba(0,0,0,0.2);
         }
         
         .header {
             text-align: center;
-            margin-bottom: 30px;
-        }
-        
-        .header h1 {
-            color: white;
-            font-size: 28px;
-            margin-bottom: 10px;
-        }
-        
-        .header p {
-            color: rgba(255,255,255,0.9);
-        }
-        
-        .deal-info {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 15px;
             margin-bottom: 20px;
         }
         
-        .info-item {
-            padding: 10px;
+        .header h1 {
+            font-size: 24px;
+            color: #333;
+            margin-bottom: 5px;
+        }
+        
+        .header p {
+            color: #666;
+            font-size: 14px;
+        }
+        
+        .deal-info {
             background: #f8f9fa;
-            border-radius: 8px;
+            padding: 15px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+        }
+        
+        .info-row {
+            display: flex;
+            margin-bottom: 10px;
         }
         
         .info-label {
             font-weight: bold;
+            width: 100px;
             color: #667eea;
-            font-size: 12px;
-            text-transform: uppercase;
+            font-size: 14px;
         }
         
         .info-value {
-            font-size: 16px;
-            margin-top: 5px;
+            flex: 1;
             color: #333;
+            font-size: 14px;
         }
         
-        .location-box {
-            background: #f0f0f0;
+        .location-card {
+            background: #e8f5e9;
             padding: 20px;
-            border-radius: 10px;
+            border-radius: 12px;
             text-align: center;
-            margin: 20px 0;
+            margin-bottom: 20px;
+        }
+        
+        .live-badge {
+            display: inline-block;
+            background: #4caf50;
+            color: white;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            animation: pulse 1.5s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.6; }
+            100% { opacity: 1; }
         }
         
         .coordinates {
             font-family: monospace;
-            font-size: 18px;
+            font-size: 16px;
             font-weight: bold;
-            color: #333;
-            margin: 10px 0;
+            color: #2e7d32;
+            margin: 15px 0;
+            word-break: break-all;
         }
         
-        .status {
-            display: inline-block;
-            padding: 5px 15px;
-            border-radius: 20px;
+        .update-time {
             font-size: 12px;
-            font-weight: bold;
-        }
-        
-        .status-live {
-            background: #4caf50;
-            color: white;
-            animation: pulse 1.5s infinite;
-        }
-        
-        .status-waiting {
-            background: #ff9800;
-            color: white;
-        }
-        
-        @keyframes pulse {
-            0% {
-                opacity: 1;
-            }
-            50% {
-                opacity: 0.6;
-            }
-            100% {
-                opacity: 1;
-            }
-        }
-        
-        .map-placeholder {
-            background: #e0e0e0;
-            height: 400px;
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-direction: column;
-            position: relative;
-            overflow: hidden;
+            color: #666;
+            margin-top: 10px;
         }
         
         .map-link {
+            display: inline-block;
             background: #2196f3;
             color: white;
             padding: 12px 24px;
             text-decoration: none;
-            border-radius: 8px;
+            border-radius: 25px;
             margin-top: 15px;
-            display: inline-block;
-        }
-        
-        .history-list {
-            max-height: 300px;
-            overflow-y: auto;
-        }
-        
-        .history-item {
-            padding: 10px;
-            border-bottom: 1px solid #e0e0e0;
-            font-size: 12px;
-        }
-        
-        .history-time {
-            color: #667eea;
+            font-size: 14px;
             font-weight: bold;
         }
         
-        .refresh-indicator {
+        .status {
+            font-size: 14px;
+            color: #666;
+            margin-top: 10px;
+        }
+        
+        .refresh-info {
             text-align: center;
+            font-size: 11px;
             color: #999;
-            font-size: 12px;
             margin-top: 10px;
         }
         
         .button-group {
             display: flex;
             gap: 10px;
-            margin-top: 20px;
+            justify-content: center;
+            margin-top: 15px;
+            flex-wrap: wrap;
         }
         
         .btn {
             padding: 10px 20px;
             border: none;
-            border-radius: 8px;
-            cursor: pointer;
+            border-radius: 25px;
             font-size: 14px;
+            cursor: pointer;
             text-decoration: none;
             display: inline-block;
-            text-align: center;
         }
         
         .btn-primary {
@@ -191,47 +166,85 @@
             color: white;
         }
         
-        .loading {
-            text-align: center;
-            padding: 20px;
+        .warning {
+            background: #fff3e0;
+            border-left: 4px solid #ff9800;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            font-size: 13px;
         }
         
-        .spinner {
-            border: 3px solid #f3f3f3;
-            border-top: 3px solid #667eea;
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            animation: spin 1s linear infinite;
-            margin: 0 auto;
-        }
-        
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        
-        @media (max-width: 768px) {
+        @media (max-width: 480px) {
+            .info-row {
+                flex-direction: column;
+            }
+            .info-label {
+                width: auto;
+                margin-bottom: 5px;
+            }
             .coordinates {
                 font-size: 14px;
-            }
-            .deal-info {
-                grid-template-columns: 1fr;
             }
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <div class="header">
-            <h1>📍 Live Deal Tracking</h1>
-            <p>Real-time location updates for your deal</p>
-        </div>
-        
-        <div class="card" id="deal-card">
-            <div class="loading">
-                <div class="spinner"></div>
-                <p>Loading deal information...</p>
+        <div class="card">
+            <div class="header">
+                <h1>📍 Live Location Tracking</h1>
+                <p>Your location is being tracked in real-time</p>
+            </div>
+            
+            <div class="deal-info">
+                <div class="info-row">
+                    <div class="info-label">Supplier:</div>
+                    <div class="info-value">{{ deal.suppliername }}</div>
+                </div>
+                <div class="info-row">
+                    <div class="info-label">Material:</div>
+                    <div class="info-value">{{ deal.materialname }}</div>
+                </div>
+                <div class="info-row">
+                    <div class="info-label">Tipper:</div>
+                    <div class="info-value">{{ deal.tippername }}</div>
+                </div>
+                <div class="info-row">
+                    <div class="info-label">Phone:</div>
+                    <div class="info-value">{{ deal.phone }}</div>
+                </div>
+            </div>
+            
+            <div class="warning">
+                ⚠️ <strong>Note:</strong> This tracking page is only visible to you. Your live location is NOT visible to admins or other users.
+            </div>
+            
+            <div class="location-card" id="location-card">
+                <div class="live-badge" id="live-badge">🔴 LIVE TRACKING</div>
+                <div id="location-content">
+                    <div class="coordinates" id="coordinates">
+                        Waiting for GPS...
+                    </div>
+                    <div class="status" id="status">
+                        <span id="status-text">Getting your location...</span>
+                    </div>
+                    <div class="update-time" id="update-time">
+                        Last update: --
+                    </div>
+                    <div class="button-group">
+                        <a href="#" id="open-maps" class="btn btn-primary" target="_blank" style="display: none;">
+                            🗺️ Open in Google Maps
+                        </a>
+                        <button class="btn btn-secondary" onclick="refreshLocation()">
+                            🔄 Refresh Now
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="refresh-info" id="refresh-info">
+                Auto-updating every 10 seconds...
             </div>
         </div>
     </div>
@@ -239,154 +252,117 @@
     <script>
         const dealId = {{ deal_id }};
         let updateInterval;
+        let currentLat = null;
+        let currentLng = null;
         
-        async function loadDealInfo() {
-            try {
-                // Fetch deal details
-                const response = await fetch(`/api/deal_locations`);
-                const deals = await response.json();
-                const deal = deals.find(d => d.id === dealId);
-                
-                if (!deal) {
-                    showError();
-                    return;
-                }
-                
-                // Fetch latest location
-                const locationResponse = await fetch(`/get_deal_location/${dealId}`);
-                const location = await locationResponse.json();
-                
-                // Fetch history
-                const historyResponse = await fetch(`/get_deal_tracking_history/${dealId}`);
-                const history = await historyResponse.json();
-                
-                renderDealInfo(deal, location, history);
-            } catch (error) {
-                console.error('Error loading deal:', error);
-                showError();
+        // Function to get current location and update server
+        function updateLocation() {
+            if (!navigator.geolocation) {
+                document.getElementById('coordinates').innerHTML = '❌ Geolocation is not supported by your browser';
+                document.getElementById('status-text').innerHTML = 'Geolocation not supported';
+                return;
             }
-        }
-        
-        function renderDealInfo(deal, location, history) {
-            const hasLocation = location && !location.error;
-            const currentLat = hasLocation ? location.latitude : (deal.live_latitude || deal.last_latitude);
-            const currentLng = hasLocation ? location.longitude : (deal.live_longitude || deal.last_longitude);
-            const lastUpdate = hasLocation ? new Date(location.timestamp) : 
-                              (deal.last_update ? new Date(deal.last_update) : null);
             
-            const html = `
-                <h2 style="margin-bottom: 20px; color: #333;">📦 ${deal.suppliername}</h2>
-                
-                <div class="deal-info">
-                    <div class="info-item">
-                        <div class="info-label">Material</div>
-                        <div class="info-value">${deal.materialname || 'N/A'}</div>
-                    </div>
-                    <div class="info-item">
-                        <div class="info-label">Tipper Name</div>
-                        <div class="info-value">${deal.tippername || 'N/A'}</div>
-                    </div>
-                    <div class="info-item">
-                        <div class="info-label">Phone Number</div>
-                        <div class="info-value">${deal.phone || 'N/A'}</div>
-                    </div>
-                    <div class="info-item">
-                        <div class="info-label">Location Description</div>
-                        <div class="info-value">${deal.location || 'N/A'}</div>
-                    </div>
-                </div>
-                
-                <div class="location-box">
-                    <div class="info-label">LIVE LOCATION STATUS</div>
-                    <div style="margin: 15px 0;">
-                        <span class="status ${hasLocation ? 'status-live' : 'status-waiting'}">
-                            ${hasLocation ? '🟢 LIVE TRACKING ACTIVE' : '🟠 WAITING FOR LOCATION'}
-                        </span>
-                    </div>
+            navigator.geolocation.getCurrentPosition(
+                async (position) => {
+                    const latitude = position.coords.latitude;
+                    const longitude = position.coords.longitude;
+                    const accuracy = position.coords.accuracy;
                     
-                    ${hasLocation ? `
-                        <div class="coordinates">
-                            📍 Latitude: ${currentLat.toFixed(6)}<br>
-                            📍 Longitude: ${currentLng.toFixed(6)}
-                        </div>
-                        <div style="font-size: 12px; color: #666;">
-                            Accuracy: ${location.accuracy ? location.accuracy.toFixed(0) + ' meters' : 'N/A'}<br>
-                            Last update: ${lastUpdate ? lastUpdate.toLocaleString() : 'Never'}
-                        </div>
-                        <div class="button-group">
-                            <a href="https://www.google.com/maps?q=${currentLat},${currentLng}" 
-                               target="_blank" class="btn btn-primary">
-                                🗺️ Open in Google Maps
-                            </a>
-                            <a href="https://www.openstreetmap.org/?mlat=${currentLat}&mlon=${currentLng}#map=15/${currentLat}/${currentLng}" 
-                               target="_blank" class="btn btn-secondary">
-                                📍 Open in OpenStreetMap
-                            </a>
-                        </div>
-                    ` : `
-                        <div class="coordinates">
-                            ⏳ No location data received yet
-                        </div>
-                        <div style="font-size: 12px; color: #666; margin-top: 10px;">
-                            The deal provider hasn't shared their location yet.<br>
-                            Location will appear here once available.
-                        </div>
-                    `}
-                </div>
-                
-                ${history && history.length > 0 ? `
-                    <div style="margin-top: 20px;">
-                        <h3>📍 Location History (Last ${Math.min(history.length, 10)} updates)</h3>
-                        <div class="history-list">
-                            ${history.slice(-10).reverse().map(h => `
-                                <div class="history-item">
-                                    <div class="history-time">${new Date(h.timestamp).toLocaleString()}</div>
-                                    <div>Lat: ${h.latitude.toFixed(6)}, Lng: ${h.longitude.toFixed(6)}</div>
-                                    ${h.accuracy ? `<div>Accuracy: ${h.accuracy.toFixed(0)}m</div>` : ''}
-                                </div>
-                            `).join('')}
-                        </div>
-                        ${history.length > 10 ? `<div class="refresh-indicator">Showing last 10 of ${history.length} updates</div>` : ''}
-                    </div>
-                ` : `
-                    <div style="margin-top: 20px; text-align: center; padding: 20px; background: #f8f9fa; border-radius: 8px;">
-                        <p>No location history available yet</p>
-                    </div>
-                `}
-                
-                <div class="refresh-indicator" id="refresh-indicator">
-                    Auto-refreshing every 10 seconds...
-                </div>
-            `;
-            
-            document.getElementById('deal-card').innerHTML = html;
-        }
-        
-        function showError() {
-            document.getElementById('deal-card').innerHTML = `
-                <div style="text-align: center; padding: 40px;">
-                    <h3>❌ Deal not found</h3>
-                    <p>The deal you're looking for doesn't exist or has been removed.</p>
-                    <a href="/dealstoadmin" class="btn btn-primary" style="margin-top: 20px;">Back to Deals</a>
-                </div>
-            `;
-        }
-        
-        function startAutoRefresh() {
-            // Update every 10 seconds
-            updateInterval = setInterval(() => {
-                loadDealInfo();
-                // Update refresh indicator
-                const indicator = document.getElementById('refresh-indicator');
-                if (indicator) {
-                    indicator.innerHTML = `Auto-refreshing every 10 seconds... Last update: ${new Date().toLocaleTimeString()}`;
+                    currentLat = latitude;
+                    currentLng = longitude;
+                    
+                    // Update the display
+                    document.getElementById('coordinates').innerHTML = `
+                        📍 ${latitude.toFixed(6)}<br>
+                        📍 ${longitude.toFixed(6)}
+                    `;
+                    document.getElementById('status-text').innerHTML = `✅ Location updated (Accuracy: ${accuracy.toFixed(0)}m)`;
+                    document.getElementById('update-time').innerHTML = `Last update: ${new Date().toLocaleTimeString()}`;
+                    
+                    // Show the Google Maps button
+                    const mapsLink = document.getElementById('open-maps');
+                    mapsLink.href = `https://www.google.com/maps?q=${latitude},${longitude}`;
+                    mapsLink.style.display = 'inline-block';
+                    
+                    // Send location to server
+                    try {
+                        const response = await fetch(`/update_my_location/${dealId}`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({
+                                latitude: latitude,
+                                longitude: longitude
+                            })
+                        });
+                        
+                        if (!response.ok) {
+                            console.error('Failed to update location on server');
+                        }
+                    } catch (error) {
+                        console.error('Error updating location:', error);
+                    }
+                },
+                (error) => {
+                    console.error('Geolocation error:', error);
+                    let errorMessage = '';
+                    switch(error.code) {
+                        case error.PERMISSION_DENIED:
+                            errorMessage = 'Please allow location access to track your position';
+                            break;
+                        case error.POSITION_UNAVAILABLE:
+                            errorMessage = 'Location information is unavailable';
+                            break;
+                        case error.TIMEOUT:
+                            errorMessage = 'Location request timed out';
+                            break;
+                        default:
+                            errorMessage = 'An unknown error occurred';
+                    }
+                    document.getElementById('coordinates').innerHTML = '⚠️ ' + errorMessage;
+                    document.getElementById('status-text').innerHTML = 'Location access required';
+                },
+                {
+                    enableHighAccuracy: true,
+                    timeout: 10000,
+                    maximumAge: 0
                 }
-            }, 10000);
+            );
         }
         
-        // Load initial data and start refresh
-        loadDealInfo();
-        startAutoRefresh();
+        // Manual refresh button
+        function refreshLocation() {
+            document.getElementById('status-text').innerHTML = 'Getting your location...';
+            updateLocation();
+        }
+        
+        // Start auto-update
+        function startAutoUpdate() {
+            // Update immediately
+            updateLocation();
+            // Then update every 10 seconds
+            updateInterval = setInterval(updateLocation, 10000);
+        }
+        
+        // Update the refresh info with timer
+        function updateRefreshInfo() {
+            let seconds = 10;
+            const refreshInfo = document.getElementById('refresh-info');
+            const timer = setInterval(() => {
+                if (seconds > 0) {
+                    refreshInfo.innerHTML = `Auto-updating in ${seconds} seconds...`;
+                    seconds--;
+                } else {
+                    seconds = 10;
+                }
+            }, 1000);
+        }
+        
+        // Start everything
+        startAutoUpdate();
+        updateRefreshInfo();
         
         // Cleanup on page unload
         window.addEventListener('beforeunload', () => {
