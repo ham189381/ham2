@@ -380,6 +380,61 @@ def get_deal_tracking_history(deal_id):
         "accuracy": h[3]
     } for h in history])
 
+# API endpoints for admin live tracking
+@app.route("/api/deal_locations")
+def get_all_deal_locations():
+    """API endpoint to get all active deals with their latest locations"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT d.id, d.suppliername, d.materialname, d.tippername, d.phone,
+               d.live_latitude, d.live_longitude,
+               dt.latitude as last_latitude, 
+               dt.longitude as last_longitude,
+               dt.timestamp as last_update
+        FROM deals d
+        LEFT JOIN (
+            SELECT DISTINCT ON (deal_id) deal_id, latitude, longitude, timestamp
+            FROM deal_tracking
+            ORDER BY deal_id, timestamp DESC
+        ) dt ON d.id = dt.deal_id
+        WHERE d.live_latitude IS NOT NULL OR dt.latitude IS NOT NULL
+        ORDER BY d.created_at DESC
+    """)
+    rows = cursor.fetchall()
+    columns = [desc[0] for desc in cursor.description]
+    deals = [dict(zip(columns, row)) for row in rows]
+    cursor.close()
+    conn.close()
+    return jsonify(deals)
+
+@app.route("/api/deal_tracking/<int:deal_id>")
+def get_deal_tracking_api(deal_id):
+    """API endpoint to get tracking history for a specific deal"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT latitude, longitude, timestamp, accuracy 
+        FROM deal_tracking 
+        WHERE deal_id = %s 
+        ORDER BY timestamp ASC
+    """, (deal_id,))
+    history = cursor.fetchall()
+    cursor.close()
+    conn.close()
+    
+    return jsonify([{
+        "latitude": h[0],
+        "longitude": h[1],
+        "timestamp": h[2],
+        "accuracy": h[3]
+    } for h in history])
+
+@app.route("/track_deal/<int:deal_id>")
+def track_deal(deal_id):
+    """Dedicated tracking page for a specific deal"""
+    return render_template("deal_tracking.html", deal_id=deal_id)
+
 @app.route('/prospect')
 def prospect():
     return render_template('prospect.html')
@@ -595,10 +650,19 @@ def save():
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
         """, (suppliername, materialname, tippername, location, live_latitude, live_longitude, phone, url1, url2))
         conn.commit()
+        
+        # Get the ID of the newly created deal
+        cursor.execute("SELECT LASTVAL()")
+        deal_id = cursor.fetchone()[0]
+        
         cursor.close()
         conn.close()
 
-        return "Your deal has been uploaded successfully"
+        # Return success with deal ID for tracking
+        return f"""Your deal has been uploaded successfully!
+        
+        Tracking URL: {request.url_root}track_deal/{deal_id}
+        Share this link to track this deal live!"""
     except Exception as e:
         print(f"ERROR in save deal: {str(e)}")
         print(traceback.format_exc())
@@ -630,9 +694,24 @@ def dealstocustomer():
 
 @app.route("/dealstoadmin")
 def dealstoadmin():
+    """Admin view with live map tracking"""
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM deals")
+    # Get deals with their latest tracking info
+    cursor.execute("""
+        SELECT d.*, 
+               dt.latitude as last_latitude, 
+               dt.longitude as last_longitude,
+               dt.timestamp as last_update,
+               dt.accuracy as last_accuracy
+        FROM deals d
+        LEFT JOIN (
+            SELECT DISTINCT ON (deal_id) deal_id, latitude, longitude, timestamp, accuracy
+            FROM deal_tracking
+            ORDER BY deal_id, timestamp DESC
+        ) dt ON d.id = dt.deal_id
+        ORDER BY d.created_at DESC
+    """)
     rows = cursor.fetchall()
     columns = [desc[0] for desc in cursor.description]
     data = [dict(zip(columns, row)) for row in rows]
