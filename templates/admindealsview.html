@@ -2,179 +2,687 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
     <title>Available Deals on Wheels - Admin View</title>
-    <!-- Link to the CSS file (adjust path if needed) -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='dealstoadminstyle.css') }}">
-    <!-- Font Awesome for icons (optional but recommended) -->
+    <!-- Font Awesome for icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
     <style>
-        .location-link {
-            display: inline-block;
-            margin-top: 5px;
-            padding: 8px 15px;
-            background: #2196F3;
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* Header Styles */
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .header h2 {
+            font-size: 2.5rem;
+            font-weight: 800;
             color: white;
-            text-decoration: none;
-            border-radius: 5px;
-            font-size: 14px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+            margin-bottom: 10px;
         }
-        .location-link:hover {
-            background: #0b7dda;
+
+        .header p {
+            color: rgba(255,255,255,0.9);
+            font-size: 1.1rem;
         }
-        .no-location {
-            color: #999;
-            font-style: italic;
-            font-size: 12px;
+
+        /* Stats Bar */
+        .stats-bar {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 30px;
+            display: flex;
+            justify-content: space-around;
+            flex-wrap: wrap;
+            gap: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
         }
-        .coordinates {
-            font-size: 11px;
+
+        .stat-item {
+            text-align: center;
+            flex: 1;
+            min-width: 120px;
+        }
+
+        .stat-number {
+            font-size: 2rem;
+            font-weight: 800;
+            color: #667eea;
+        }
+
+        .stat-label {
             color: #666;
-            margin-top: 8px;
-            display: block;
+            font-size: 0.9rem;
+            margin-top: 5px;
         }
-        .deal-image {
-            cursor: pointer;
-            transition: transform 0.3s;
+
+        /* Grid Layout */
+        .deals-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+            gap: 30px;
+            margin-top: 20px;
         }
-        .deal-image:hover {
-            transform: scale(1.05);
+
+        /* Card Styles */
+        .deal-card {
+            background: white;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+            position: relative;
+            animation: fadeInUp 0.5s ease;
         }
-        .embedded-map {
-            margin: 10px 0;
-            border-radius: 8px;
+
+        .deal-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.2);
+        }
+
+        /* Hot Badge */
+        .hot-badge {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            padding: 5px 15px;
+            border-radius: 25px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            z-index: 10;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            animation: pulse 2s infinite;
+        }
+
+        /* Card Header */
+        .card-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .card-header h3 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin: 0;
+        }
+
+        .material-type {
+            display: inline-block;
+            background: rgba(255,255,255,0.2);
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            margin-top: 10px;
+        }
+
+        /* Card Body */
+        .card-body {
+            padding: 20px;
+        }
+
+        .info-row {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+            padding: 8px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            transition: all 0.2s ease;
+        }
+
+        .info-row:hover {
+            background: #e9ecef;
+            transform: translateX(5px);
+        }
+
+        .info-icon {
+            width: 35px;
+            color: #667eea;
+            font-size: 1.2rem;
+        }
+
+        .info-content {
+            flex: 1;
+        }
+
+        .info-label {
+            font-size: 0.75rem;
+            color: #999;
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+
+        .info-value {
+            font-size: 1rem;
+            font-weight: 500;
+            color: #333;
+        }
+
+        .phone-link {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .phone-link:hover {
+            text-decoration: underline;
+        }
+
+        /* Map Styles */
+        .map-container {
+            margin: 15px 0;
+            border-radius: 12px;
             overflow: hidden;
             box-shadow: 0 2px 8px rgba(0,0,0,0.1);
         }
-        .embedded-map iframe {
-            display: block;
+
+        .map-container iframe {
             width: 100%;
-            height: 250px;
-            border: 0;
+            height: 200px;
+            display: block;
         }
-        .map-buttons {
+
+        .location-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: #2196F3;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-size: 0.85rem;
+            font-weight: 500;
+            transition: all 0.2s ease;
             margin-top: 10px;
+        }
+
+        .location-link:hover {
+            background: #0b7dda;
+            transform: translateY(-2px);
+        }
+
+        .coordinates {
+            display: block;
+            font-size: 0.7rem;
+            color: #666;
+            margin-top: 8px;
+            font-family: monospace;
+        }
+
+        .no-location {
+            display: inline-block;
+            background: #f8d7da;
+            color: #721c24;
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            margin-top: 10px;
+        }
+
+        /* Image Gallery */
+        .image-gallery {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+
+        .deal-image {
+            flex: 1;
+            min-width: 120px;
+            height: 120px;
+            object-fit: cover;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .deal-image:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        /* Card Footer */
+        .card-footer {
+            background: #f8f9fa;
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .price-tag {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 25px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .call-btn {
+            background: #28a745;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 25px;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 600;
+            transition: all 0.2s ease;
+        }
+
+        .call-btn:hover {
+            background: #218838;
+            transform: scale(1.05);
+        }
+
+        /* Modal Styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.9);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            cursor: pointer;
+        }
+
+        .modal {
+            background: white;
+            border-radius: 15px;
+            max-width: 90%;
+            max-height: 90%;
+            overflow: auto;
+            cursor: default;
+        }
+
+        .modal-header {
+            padding: 15px 20px;
+            border-bottom: 1px solid #ddd;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-header h3 {
+            margin: 0;
+        }
+
+        .close-modal {
+            font-size: 30px;
+            cursor: pointer;
+            color: #999;
+            transition: color 0.2s;
+        }
+
+        .close-modal:hover {
+            color: #333;
+        }
+
+        .modal-body {
+            padding: 20px;
+            text-align: center;
+        }
+
+        .modal-body img {
+            max-width: 100%;
+            max-height: 70vh;
+            border-radius: 10px;
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            background: white;
+            border-radius: 20px;
+        }
+
+        .empty-state i {
+            font-size: 4rem;
+            color: #667eea;
+            margin-bottom: 20px;
+        }
+
+        .empty-state p {
+            font-size: 1.2rem;
+            color: #666;
+        }
+
+        /* Animations */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.05);
+            }
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+
+            .container {
+                padding: 10px;
+            }
+
+            .header h2 {
+                font-size: 1.8rem;
+            }
+
+            .deals-grid {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+
+            .stats-bar {
+                flex-direction: column;
+                gap: 10px;
+            }
+
+            .stat-item {
+                min-width: auto;
+            }
+
+            .info-row {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .info-icon {
+                margin-bottom: 5px;
+            }
+
+            .image-gallery {
+                flex-direction: column;
+            }
+
+            .deal-image {
+                width: 100%;
+                height: 200px;
+            }
+
+            .card-footer {
+                flex-direction: column;
+            }
+
+            .call-btn, .price-tag {
+                width: 100%;
+                text-align: center;
+                justify-content: center;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .header h2 {
+                font-size: 1.5rem;
+            }
+
+            .card-header h3 {
+                font-size: 1.2rem;
+            }
+
+            .map-container iframe {
+                height: 180px;
+            }
+        }
+
+        /* Scrollbar Styling */
+        ::-webkit-scrollbar {
+            width: 10px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #667eea;
+            border-radius: 5px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #764ba2;
         }
     </style>
 </head>
 <body>
 
     <div class="container">
-        <h2 class="text-center mb-4">🔥 Available Deals on Wheels - Admin View</h2>
+        <div class="header">
+            <h2><i class="fas fa-fire"></i> Available Deals on Wheels</h2>
+            <p>Discover the best deals from trusted suppliers</p>
+        </div>
 
-        <div class="row">
+        <!-- Stats Bar -->
+        <div class="stats-bar">
+            <div class="stat-item">
+                <div class="stat-number">{{ data|length }}</div>
+                <div class="stat-label">Total Deals</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number">
+                    {% set with_location = namespace(count=0) %}
+                    {% for row in data %}
+                        {% if row.live_latitude and row.live_longitude %}
+                            {% set with_location.count = with_location.count + 1 %}
+                        {% endif %}
+                    {% endfor %}
+                    {{ with_location.count }}
+                </div>
+                <div class="stat-label">With Live Location</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number">
+                    {% set materials = [] %}
+                    {% for row in data %}
+                        {% if row.materialname not in materials %}
+                            {% set _ = materials.append(row.materialname) %}
+                        {% endif %}
+                    {% endfor %}
+                    {{ materials|length }}
+                </div>
+                <div class="stat-label">Materials</div>
+            </div>
+        </div>
+
+        <!-- Deals Grid -->
+        <div class="deals-grid">
             {% for row in data %}
-            <div class="col">
-                <div class="card">
-                    <!-- Optional: Add a badge for new or hot deals -->
-                    {% if loop.first %}
-                    <div class="badge badge-primary" style="position: absolute; top: 10px; right: 10px;">HOT</div>
-                    {% endif %}
-                    
-                    <div class="card-header">
-                        <h3>{{ row.materialname }}</h3>
-                    </div>
+            <div class="deal-card">
+                {% if loop.first %}
+                <div class="hot-badge">
+                    <i class="fas fa-fire"></i> HOT DEAL
+                </div>
+                {% endif %}
+                
+                <div class="card-header">
+                    <h3>{{ row.materialname|upper }}</h3>
+                    <span class="material-type">
+                        <i class="fas fa-cube"></i> {{ row.materialname }}
+                    </span>
+                </div>
 
-                    <div class="card-body">
-                        <p><i class="fas fa-user"></i> <strong>Supplier:</strong> {{ row.suppliername }}</p>
-                        <p><i class="fas fa-truck"></i> <strong>Tipper:</strong> {{ row.tippername }}</p>
-                        <p><i class="fas fa-map-marker-alt"></i> <strong>Location:</strong> {{ row.location }}</p>
-                        
-                        <!-- Live Location Section with Embedded Map -->
-                        <p>
-                            <i class="fas fa-location-dot"></i> <strong>Live Location:</strong>
-                            {% if row.live_latitude and row.live_longitude %}
-                                <br>
-                                <!-- Embedded Google Map -->
-                                <div class="embedded-map">
-                                    <iframe 
-                                        src="https://www.google.com/maps?q={{ row.live_latitude }},{{ row.live_longitude }}&output=embed"
-                                        allowfullscreen>
-                                    </iframe>
-                                </div>
-                                
-                                <div class="map-buttons">
-                                    <a href="https://www.google.com/maps?q={{ row.live_latitude }},{{ row.live_longitude }}" 
-                                       target="_blank" 
-                                       class="location-link">
-                                        <i class="fas fa-external-link-alt"></i> Open in Google Maps (Full Screen)
-                                    </a>
-                                </div>
-                                <span class="coordinates">
-                                    📍 Coordinates: {{ "%.6f"|format(row.live_latitude) }}, {{ "%.6f"|format(row.live_longitude) }}
-                                </span>
-                            {% else %}
-                                <span class="no-location">⚠️ No location captured for this deal</span>
-                            {% endif %}
-                        </p>
-
-                        <!-- Phone number with click-to-call -->
-                        <p>
-                            <i class="fas fa-phone-alt"></i> <strong>Phone:</strong> 
-                            <a href="tel:{{ row.phone }}" class="phone-link">{{ row.phone }}</a>
-                        </p>
-
-                        <!-- Image gallery -->
-                        <div class="image-gallery">
-                            {% if row.imageone %}
-                            <img src="{{ row.imageone }}" 
-                                 alt="Deal image 1" 
-                                 class="deal-image"
-                                 style="max-width: 200px; margin: 5px; border-radius: 5px;"
-                                 onclick="openModal(this.src)">
-                            {% endif %}
-                            
-                            {% if row.imagetwo %}
-                            <img src="{{ row.imagetwo }}" 
-                                 alt="Deal image 2" 
-                                 class="deal-image"
-                                 style="max-width: 200px; margin: 5px; border-radius: 5px;"
-                                 onclick="openModal(this.src)">
-                            {% endif %}
+                <div class="card-body">
+                    <div class="info-row">
+                        <div class="info-icon">
+                            <i class="fas fa-user"></i>
+                        </div>
+                        <div class="info-content">
+                            <div class="info-label">Supplier</div>
+                            <div class="info-value">{{ row.suppliername }}</div>
                         </div>
                     </div>
 
-                    <div class="card-footer flex-between">
-                        <span class="price-tag">Call for price</span>
-                        <a href="tel:{{ row.phone }}" class="btn btn-primary btn-small">
-                            <i class="fas fa-phone-alt"></i> Call Now
-                        </a>
+                    <div class="info-row">
+                        <div class="info-icon">
+                            <i class="fas fa-truck"></i>
+                        </div>
+                        <div class="info-content">
+                            <div class="info-label">Tipper</div>
+                            <div class="info-value">{{ row.tippername }}</div>
+                        </div>
                     </div>
+
+                    <div class="info-row">
+                        <div class="info-icon">
+                            <i class="fas fa-map-marker-alt"></i>
+                        </div>
+                        <div class="info-content">
+                            <div class="info-label">Location</div>
+                            <div class="info-value">{{ row.location }}</div>
+                        </div>
+                    </div>
+
+                    <div class="info-row">
+                        <div class="info-icon">
+                            <i class="fas fa-phone-alt"></i>
+                        </div>
+                        <div class="info-content">
+                            <div class="info-label">Phone</div>
+                            <div class="info-value">
+                                <a href="tel:{{ row.phone }}" class="phone-link">
+                                    <i class="fas fa-phone"></i> {{ row.phone }}
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Live Location Section with Embedded Map -->
+                    {% if row.live_latitude and row.live_longitude %}
+                    <div class="map-container">
+                        <iframe 
+                            src="https://www.google.com/maps?q={{ row.live_latitude }},{{ row.live_longitude }}&output=embed"
+                            allowfullscreen>
+                        </iframe>
+                    </div>
+                    
+                    <a href="https://www.google.com/maps?q={{ row.live_latitude }},{{ row.live_longitude }}" 
+                       target="_blank" 
+                       class="location-link">
+                        <i class="fas fa-external-link-alt"></i> Open in Google Maps
+                    </a>
+                    <span class="coordinates">
+                        <i class="fas fa-crosshairs"></i> {{ "%.6f"|format(row.live_latitude) }}, {{ "%.6f"|format(row.live_longitude) }}
+                    </span>
+                    {% else %}
+                    <div class="no-location">
+                        <i class="fas fa-map-pin"></i> No location captured for this deal
+                    </div>
+                    {% endif %}
+
+                    <!-- Image Gallery -->
+                    <div class="image-gallery">
+                        {% if row.imageone %}
+                        <img src="{{ row.imageone }}" 
+                             alt="Deal image 1" 
+                             class="deal-image"
+                             onclick="openModal(this.src)">
+                        {% endif %}
+                        
+                        {% if row.imagetwo %}
+                        <img src="{{ row.imagetwo }}" 
+                             alt="Deal image 2" 
+                             class="deal-image"
+                             onclick="openModal(this.src)">
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="card-footer">
+                    <span class="price-tag">
+                        <i class="fas fa-tag"></i> Call for Price
+                    </span>
+                    <a href="tel:{{ row.phone }}" class="call-btn">
+                        <i class="fas fa-phone-alt"></i> Call Now
+                    </a>
                 </div>
             </div>
             {% else %}
-            <div class="col">
-                <div class="card" style="text-align: center; padding: 50px;">
-                    <p>No deals available at the moment.</p>
-                </div>
+            <div class="empty-state">
+                <i class="fas fa-box-open"></i>
+                <p>No deals available at the moment.</p>
+                <p style="font-size: 0.9rem; margin-top: 10px;">Check back later for exciting deals!</p>
             </div>
             {% endfor %}
         </div>
     </div>
 
-    <!-- Image Modal (for enlarging images) -->
+    <!-- Image Modal -->
     <div id="imageModal" class="modal-overlay" style="display: none;" onclick="closeModal()">
         <div class="modal" onclick="event.stopPropagation()">
             <div class="modal-header">
-                <h3>Deal Image</h3>
+                <h3><i class="fas fa-image"></i> Deal Image</h3>
                 <span class="close-modal" onclick="closeModal()">&times;</span>
             </div>
-            <div class="modal-body text-center">
-                <img id="modalImage" src="" alt="Enlarged view" style="max-width: 100%; max-height: 70vh;">
+            <div class="modal-body">
+                <img id="modalImage" src="" alt="Enlarged view">
             </div>
         </div>
     </div>
 
-    <!-- Include the JavaScript file -->
-    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
     <script>
-        // Simple modal functions (can also be placed in script.js)
+        // Modal functions
         function openModal(src) {
             document.getElementById('modalImage').src = src;
             document.getElementById('imageModal').style.display = 'flex';
+            document.body.style.overflow = 'hidden';
         }
+        
         function closeModal() {
             document.getElementById('imageModal').style.display = 'none';
+            document.body.style.overflow = 'auto';
         }
         
         // Close modal with Escape key
@@ -182,6 +690,16 @@
             if (event.key === 'Escape') {
                 closeModal();
             }
+        });
+        
+        // Smooth scroll for anchor links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                document.querySelector(this.getAttribute('href')).scrollIntoView({
+                    behavior: 'smooth'
+                });
+            });
         });
     </script>
 </body>
