@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Live Deal Tracking</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        #map { height: 600px; width: 100%; }
+        .info { padding: 10px; background: white; margin: 10px; border-radius: 5px; }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+    <div class="info" id="deal-info">Loading deal information...</div>
+    
+    <script>
+        const dealId = {{ deal_id }};
+        let map;
+        let marker;
+        let trackInterval;
+        
+        function initMap() {
+            map = L.map('map').setView([0.3136, 32.5811], 13);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+        }
+        
+        async function updateLocation() {
+            try {
+                const response = await fetch(`/get_deal_location/${dealId}`);
+                const data = await response.json();
+                
+                if (!data.error) {
+                    if (!marker) {
+                        marker = L.marker([data.latitude, data.longitude]).addTo(map);
+                        map.setView([data.latitude, data.longitude], 15);
+                    } else {
+                        marker.setLatLng([data.latitude, data.longitude]);
+                    }
+                    
+                    document.getElementById('deal-info').innerHTML = `
+                        <strong>Last Update:</strong> ${new Date(data.timestamp).toLocaleString()}<br>
+                        <strong>Location:</strong> ${data.latitude.toFixed(6)}, ${data.longitude.toFixed(6)}<br>
+                        <strong>Accuracy:</strong> ${data.accuracy ? data.accuracy.toFixed(0) + 'm' : 'N/A'}
+                    `;
+                }
+            } catch (error) {
+                console.error('Error updating location:', error);
+            }
+        }
+        
+        initMap();
+        updateLocation();
+        trackInterval = setInterval(updateLocation, 5000);
+    </script>
+</body>
+</html>
